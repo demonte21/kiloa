@@ -52,15 +52,13 @@ fi
 # FAILBACK: We will try to download the source and run go build if go is installed, otherwise warn user.
 
 echo "Downloading Agent Binary..."
-# TODO: Replace with actual release URL after GitHub repo creation
-# sudo curl -L "https://github.com/USER/REPO/releases/download/latest/agent-linux-amd64" -o "$INSTALL_DIR/agent"
-# sudo chmod +x "$INSTALL_DIR/agent"
+sudo curl -L "https://github.com/demonte21/kiloa/releases/download/Prod/agent-linux-amd64" -o "$INSTALL_DIR/agent"
+sudo chmod +x "$INSTALL_DIR/agent"
 
-# For now, let's just create a placeholder check
 if [ ! -f "$INSTALL_DIR/agent" ]; then
     echo "⚠️  Agent binary not found in $INSTALL_DIR."
-    echo "    Please copy the 'agent-linux-amd64' binary to '$INSTALL_DIR/agent' manually for now,"
-    echo "    or update this script with your GitHub Release URL."
+    echo "    Download failed. Please check the URL or network connection."
+    exit 1
 fi
 
 # 3. Create Systemd Service

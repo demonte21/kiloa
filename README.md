@@ -31,24 +31,21 @@ You need a central server to host the dashboard.
 **Note:** By default, the dashboard uses an SQLite database (`kiloa.db`) stored in the running directory.
 
 ### 2. Install the Agent on your VPS
-On every VPS you want to monitor:
+On every VPS you want to monitor, run this single command:
 
-1.  **Build the Agent for Linux** (from your dev machine):
-    ```bash
-    cd agent
-    env GOOS=linux GOARCH=amd64 go build -o agent main.go
-    ```
-2.  **Upload the `agent` binary** to your VPS (e.g., via SCP).
-3.  **Run the install script** (or manually run the binary):
-    ```bash
-    # Copy agent to /opt/kiloa-agent/agent first
-    chmod +x /opt/kiloa-agent/agent
-    
-    # Run directly
-    ./agent -server "http://YOUR_DASHBOARD_IP:8080" -token "secret"
-    ```
+```bash
+curl -sL https://raw.githubusercontent.com/demonte21/kiloa/Prod/agent/install.sh | bash
+```
 
-*(A proper automated install script `install.sh` is provided in the `agent/` folder, but requires you to host the compiled binary somewhere accessible via data-url, like GitHub Releases).*
+The script will interactively ask for your:
+- **Dashboard URL** (e.g., `http://YOUR-IP:8080`)
+- **Secret Token**
+- **Interval** (seconds)
+
+Alternatively, you can provide arguments directly to skip prompts:
+```bash
+curl -sL https://raw.githubusercontent.com/demonte21/kiloa/Prod/agent/install.sh | bash -s -- -s "http://YOUR-IP:8080" -t "your-secret" -i 5
+```
 
 ---
 
