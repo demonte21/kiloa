@@ -24,13 +24,13 @@ done
 if [ $OPTIND -eq 1 ]; then
     echo "Starting Interactive Setup..."
     
-    read -p "Enter Dashboard URL [$SERVER_URL]: " input_url
+    read -p "Enter Dashboard URL [$SERVER_URL]: " input_url < /dev/tty
     SERVER_URL=${input_url:-$SERVER_URL}
 
-    read -p "Enter Secret Token [$TOKEN]: " input_token
+    read -p "Enter Secret Token [$TOKEN]: " input_token < /dev/tty
     TOKEN=${input_token:-$TOKEN}
 
-    read -p "Enter Interval (seconds) [$INTERVAL]: " input_interval
+    read -p "Enter Interval (seconds) [$INTERVAL]: " input_interval < /dev/tty
     INTERVAL=${input_interval:-$INTERVAL}
     
     echo "-----------------------------------"
