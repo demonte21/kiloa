@@ -34,7 +34,7 @@ You need a central server to host the dashboard.
 On every VPS you want to monitor, run this single command:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/demonte21/kiloa/Prod/agent/install.sh | bash
+curl -sL https://raw.githubusercontent.com/demonte21/kiloa/master/agent/install.sh | bash
 ```
 
 The script will interactively ask for your:
@@ -44,7 +44,7 @@ The script will interactively ask for your:
 
 Alternatively, you can provide arguments directly to skip prompts:
 ```bash
-curl -sL https://raw.githubusercontent.com/demonte21/kiloa/Prod/agent/install.sh | bash -s -- -s "http://YOUR-IP:8080" -t "your-secret" -i 5
+curl -sL https://raw.githubusercontent.com/demonte21/kiloa/master/agent/install.sh | bash -s -- -s "http://YOUR-IP:8080" -t "your-secret" -i 5
 ```
 
 ---
