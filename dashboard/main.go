@@ -75,6 +75,12 @@ func main() {
 			}
 			return (float64(a) / float64(b)) * 100
 		},
+		"loadPercent": func(load float64, cores int) float64 {
+			if cores == 0 {
+				return 0
+			}
+			return (load / float64(cores)) * 100
+		},
 	})
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/public", "./public")

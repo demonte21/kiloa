@@ -116,8 +116,7 @@
                             <div class="flex flex-col gap-1">
                                 <span>{{ printf "%.2f" .Load1 }} / {{ printf "%.2f" .Load5 }}</span>
                                 <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="Load vs Cores">
-                                    <div class="h-full bg-yellow-500"
-                                        style="width: {{ percent (mul .Load1 100.0 | int) (mul .Cores 100.0 | int) }}%">
+                                    <div class="h-full bg-yellow-500" style="width: {{ loadPercent .Load1 .Cores }}%">
                                     </div>
                                 </div>
                             </div>
