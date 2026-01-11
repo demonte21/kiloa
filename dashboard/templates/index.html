@@ -112,12 +112,20 @@
                         <td class="px-6 py-4 font-medium text-white">{{ .ISP }}</td>
                         <td class="px-6 py-4 font-mono text-xs text-gray-400">{{ .ID }}</td>
                         <td class="px-6 py-4">{{ .Cores }}</td>
-                        <td class="px-6 py-4 font-mono text-xs">{{ printf "%.2f" .Load1 }} / {{ printf "%.2f" .Load5 }}
+                        <td class="px-6 py-4 font-mono text-xs">
+                            <div class="flex flex-col gap-1">
+                                <span>{{ printf "%.2f" .Load1 }} / {{ printf "%.2f" .Load5 }}</span>
+                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="Load vs Cores">
+                                    <div class="h-full bg-yellow-500"
+                                        style="width: {{ percent (mul .Load1 100.0 | int) (mul .Cores 100.0 | int) }}%">
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex flex-col gap-1">
-                                <span class="text-xs text-gray-400">{{ printf "%.1f" (div .MemUsed 1073741824.0) }}G
-                                    <span class="text-gray-600">/ {{ printf "%.1f" (div .MemTotal 1073741824.0)
+                                <span class="text-xs text-gray-400">{{ printf "%.2f" (div .MemUsed 1073741824.0) }}G
+                                    <span class="text-gray-600">/ {{ printf "%.2f" (div .MemTotal 1073741824.0)
                                         }}G</span></span>
                                 <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                     <div class="h-full bg-blue-500" style="width: {{ percent .MemUsed .MemTotal }}%">
@@ -127,8 +135,8 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex flex-col gap-1">
-                                <span class="text-xs text-gray-400">{{ printf "%.1f" (div .DiskUsed 1073741824.0) }}G
-                                    <span class="text-gray-600">/ {{ printf "%.1f" (div .DiskTotal 1073741824.0)
+                                <span class="text-xs text-gray-400">{{ printf "%.2f" (div .DiskUsed 1073741824.0) }}G
+                                    <span class="text-gray-600">/ {{ printf "%.2f" (div .DiskTotal 1073741824.0)
                                         }}G</span></span>
                                 <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                     <div class="h-full bg-purple-500"

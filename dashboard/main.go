@@ -60,6 +60,9 @@ func main() {
 
 	r := gin.Default()
 	r.SetFuncMap(template.FuncMap{
+		"int": func(f float64) int {
+			return int(f)
+		},
 		"div": func(a uint64, b float64) float64 {
 			return float64(a) / b
 		},
