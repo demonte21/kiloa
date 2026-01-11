@@ -51,6 +51,11 @@ fi
 # For this template, we assume the user will build or host the binary.
 # FAILBACK: We will try to download the source and run go build if go is installed, otherwise warn user.
 
+# 2. Stop Service (if running) to release file lock
+echo "Stopping existing service to update binary..."
+sudo systemctl stop $SERVICE_NAME 2>/dev/null || true
+
+# 3. Download Binary (Mocking URL for now, user needs to replace REPO/USER)
 echo "Downloading Agent Binary..."
 sudo curl -L "https://github.com/demonte21/kiloa/releases/download/Prod/agent-linux-amd64" -o "$INSTALL_DIR/agent"
 sudo chmod +x "$INSTALL_DIR/agent"
