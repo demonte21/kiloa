@@ -115,7 +115,8 @@
                         <td class="px-6 py-4 font-mono text-xs">
                             <div class="flex flex-col gap-1">
                                 <span>{{ printf "%.2f" .Load1 }} / {{ printf "%.2f" .Load5 }}</span>
-                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="Load vs Cores">
+                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden"
+                                    title="Load: {{ printf " %.1f" (loadPercent .Load1 .Cores) }}%">
                                     <div class="h-full bg-yellow-500" style="width: {{ loadPercent .Load1 .Cores }}%">
                                     </div>
                                 </div>
@@ -126,7 +127,8 @@
                                 <span class="text-xs text-gray-400">{{ printf "%.2f" (div .MemUsed 1073741824.0) }}G
                                     <span class="text-gray-600">/ {{ printf "%.2f" (div .MemTotal 1073741824.0)
                                         }}G</span></span>
-                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden" title="RAM: {{ printf "
+                                    %.1f" (percent .MemUsed .MemTotal) }}%">
                                     <div class="h-full bg-blue-500" style="width: {{ percent .MemUsed .MemTotal }}%">
                                     </div>
                                 </div>
@@ -137,7 +139,8 @@
                                 <span class="text-xs text-gray-400">{{ printf "%.2f" (div .DiskUsed 1073741824.0) }}G
                                     <span class="text-gray-600">/ {{ printf "%.2f" (div .DiskTotal 1073741824.0)
                                         }}G</span></span>
-                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden"
+                                    title="Disk: {{ printf " %.1f" (percent .DiskUsed .DiskTotal) }}%">
                                     <div class="h-full bg-purple-500"
                                         style="width: {{ percent .DiskUsed .DiskTotal }}%"></div>
                                 </div>
@@ -153,7 +156,8 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <span class="inline-block w-2.5 h-2.5 rounded-full {{ if eq .Status " online" }}bg-green-500
-                                shadow-[0_0_8px_rgba(34,197,94,0.6)]{{ else }}bg-red-500{{ end }}"></span>
+                                shadow-[0_0_8px_rgba(34,197,94,0.6)]{{ else }}bg-red-500{{ end }}"
+                                title="Last Seen: {{ .LastSeen }}"></span>
                         </td>
                     </tr>
                     {{ end }}
