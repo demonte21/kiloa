@@ -63,6 +63,9 @@ func main() {
 		"div": func(a uint64, b float64) float64 {
 			return float64(a) / b
 		},
+		"mul": func(a, b float64) float64 {
+			return a * b
+		},
 	})
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/public", "./public")

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,7 +31,12 @@
         }
     </script>
     <style>
-        body { background-color: #111217; color: #a1a1aa; font-family: 'Inter', sans-serif; }
+        body {
+            background-color: #111217;
+            color: #a1a1aa;
+            font-family: 'Inter', sans-serif;
+        }
+
         .glass-card {
             background: rgba(26, 27, 38, 0.8);
             backdrop-filter: blur(10px);
@@ -38,10 +44,12 @@
         }
     </style>
 </head>
+
 <body class="p-6">
 
     <!-- Header Stats -->
-    <div class="max-w-7xl mx-auto glass-card rounded-xl p-6 mb-8 flex flex-col md:flex-row justify-between items-center shadow-lg">
+    <div
+        class="max-w-7xl mx-auto glass-card rounded-xl p-6 mb-8 flex flex-col md:flex-row justify-between items-center shadow-lg">
         <div>
             <h1 class="text-2xl font-bold text-white tracking-tight">System Status</h1>
             <p class="text-sm text-gray-500">Overall network health and aggregate resources.</p>
@@ -53,16 +61,18 @@
             </div>
             <div class="text-center">
                 <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">RAM Usage</div>
-                <div class="text-xl font-bold text-white">{{ .Stats.MemUsed }} <span class="text-gray-500 text-sm">/ {{ .Stats.MemTotal }}</span></div>
+                <div class="text-xl font-bold text-white">{{ .Stats.MemUsed }} <span class="text-gray-500 text-sm">/ {{
+                        .Stats.MemTotal }}</span></div>
             </div>
             <div class="text-center">
                 <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Disk Usage</div>
-                <div class="text-xl font-bold text-white">{{ .Stats.DiskUsed }} <span class="text-gray-500 text-sm">/ {{ .Stats.DiskTotal }}</span></div>
+                <div class="text-xl font-bold text-white">{{ .Stats.DiskUsed }} <span class="text-gray-500 text-sm">/ {{
+                        .Stats.DiskTotal }}</span></div>
             </div>
             <div class="text-center">
                 <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Network</div>
                 <div class="text-xl font-bold text-white">
-                    <span class="text-red-400">↑ {{ printf "%.2f" .Stats.NetUp }}</span> 
+                    <span class="text-red-400">↑ {{ printf "%.2f" .Stats.NetUp }}</span>
                     <span class="text-green-400 ml-2">↓ {{ printf "%.2f" .Stats.NetDown }}</span>
                     <span class="text-xs text-gray-500">MB/s</span>
                 </div>
@@ -74,14 +84,17 @@
     <div class="max-w-7xl mx-auto">
         <!-- Labels / Filters (Static for now) -->
         <div class="mb-6 flex flex-wrap gap-2">
-            <span class="px-3 py-1 bg-kiloa-card border border-kiloa-border rounded-full text-xs text-white cursor-pointer hover:bg-gray-800 transition">All Nodes</span>
+            <span
+                class="px-3 py-1 bg-kiloa-card border border-kiloa-border rounded-full text-xs text-white cursor-pointer hover:bg-gray-800 transition">All
+                Nodes</span>
             <!-- Could iterate locations here if enabled in backend -->
         </div>
 
         <div class="glass-card rounded-xl overflow-hidden shadow-lg">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="bg-[#15161c] text-xs uppercase tracking-wider text-gray-500 border-b border-kiloa-border">
+                    <tr
+                        class="bg-[#15161c] text-xs uppercase tracking-wider text-gray-500 border-b border-kiloa-border">
                         <th class="px-6 py-4">ISP</th>
                         <th class="px-6 py-4">Node ID</th>
                         <th class="px-6 py-4">Cores</th>
@@ -99,21 +112,41 @@
                         <td class="px-6 py-4 font-medium text-white">{{ .ISP }}</td>
                         <td class="px-6 py-4 font-mono text-xs text-gray-400">{{ .ID }}</td>
                         <td class="px-6 py-4">{{ .Cores }}</td>
-                        <td class="px-6 py-4 font-mono text-xs">{{ printf "%.2f" .Load1 }} / {{ printf "%.2f" .Load5 }}</td>
+                        <td class="px-6 py-4 font-mono text-xs">{{ printf "%.2f" .Load1 }} / {{ printf "%.2f" .Load5 }}
+                        </td>
                         <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <span>{{ printf "%.1f" (div .MemUsed 1073741824.0) }}G</span>
-                                <!-- Pro Tip: Add a progress bar here later -->
+                            <div class="flex flex-col gap-1">
+                                <span class="text-xs text-gray-400">{{ printf "%.1f" (div .MemUsed 1073741824.0) }}G
+                                    <span class="text-gray-600">/ {{ printf "%.1f" (div .MemTotal 1073741824.0)
+                                        }}G</span></span>
+                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-blue-500"
+                                        style="width: {{ mul (div .MemUsed .MemTotal) 100.0 }}%"></div>
+                                </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4">{{ printf "%.1f" (div .DiskUsed 1073741824.0) }}G</td>
-                        <td class="px-6 py-4 {{ if gt .CPUSteal 10.0 }}text-red-400 font-bold{{ end }}">{{ printf "%.2f" .CPUSteal }}%</td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-1">
+                                <span class="text-xs text-gray-400">{{ printf "%.1f" (div .DiskUsed 1073741824.0) }}G
+                                    <span class="text-gray-600">/ {{ printf "%.1f" (div .DiskTotal 1073741824.0)
+                                        }}G</span></span>
+                                <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-purple-500"
+                                        style="width: {{ mul (div .DiskUsed .DiskTotal) 100.0 }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 {{ if gt .CPUSteal 10.0 }}text-red-400 font-bold{{ end }}">{{ printf "%.2f"
+                            .CPUSteal }}%</td>
                         <td class="px-6 py-4 font-mono text-xs">
-                            <span class="text-red-400">↑ {{ printf "%.2f" .NetUp }}</span> 
-                            <span class="text-green-400">↓ {{ printf "%.2f" .NetDown }}</span>
+                            <div class="flex flex-col">
+                                <span class="text-red-400">↑ {{ printf "%.2f" .NetUp }} MB/s</span>
+                                <span class="text-green-400">↓ {{ printf "%.2f" .NetDown }} MB/s</span>
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <span class="inline-block w-2.5 h-2.5 rounded-full {{ if eq .Status "online" }}bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]{{ else }}bg-red-500{{ end }}"></span>
+                            <span class="inline-block w-2.5 h-2.5 rounded-full {{ if eq .Status " online" }}bg-green-500
+                                shadow-[0_0_8px_rgba(34,197,94,0.6)]{{ else }}bg-red-500{{ end }}"></span>
                         </td>
                     </tr>
                     {{ end }}
@@ -129,4 +162,5 @@
         }, 5000);
     </script>
 </body>
+
 </html>

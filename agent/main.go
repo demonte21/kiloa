@@ -162,6 +162,11 @@ func main() {
 		*nodeID = hostInfo.Hostname
 	}
 
+	if *isp == "Unknown" {
+		fmt.Println("Detecting ISP...")
+		*isp = getISP()
+	}
+
 	cfg := Config{
 		ServerURL: *server,
 		Token:     *token,
@@ -214,4 +219,27 @@ func sendReport(cfg Config, data []byte) {
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Server returned non-OK status: %v", resp.Status)
 	}
+}
+
+type IPAPIResponse struct {
+	ISP string `json:"isp"`
+}
+
+func getISP() string {
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("http://ip-api.com/json/")
+	if err != nil {
+		return "Unknown"
+	}
+	defer resp.Body.Close()
+
+	var result IPAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "Unknown"
+	}
+
+	if result.ISP == "" {
+		return "Unknown"
+	}
+	return result.ISP
 }
