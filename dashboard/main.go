@@ -66,6 +66,12 @@ func main() {
 		"mul": func(a, b float64) float64 {
 			return a * b
 		},
+		"percent": func(a, b uint64) float64 {
+			if b == 0 {
+				return 0
+			}
+			return (float64(a) / float64(b)) * 100
+		},
 	})
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/public", "./public")
