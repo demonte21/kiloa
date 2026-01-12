@@ -210,37 +210,32 @@
             <!-- Header Row -->
             <div
                 class="grid grid-cols-12 gap-4 px-6 py-2 text-xs font-mono font-medium text-gray-500 uppercase tracking-wider">
-                <div class="col-span-2">Provider / ISP</div>
-                <div class="col-span-2">ID</div>
+                <div class="col-span-3">Provider / ISP</div>
                 <div class="col-span-1 text-center">CPU</div>
                 <div class="col-span-2">Load</div>
                 <div class="col-span-2">Memory</div>
                 <div class="col-span-2">Storage</div>
+                <div class="col-span-1">Network</div>
                 <div class="col-span-1 text-right">State</div>
             </div>
 
             <!-- Client Rows -->
             <% nodes.forEach(function(node) { %>
                 <div
-                    class="group relative bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/80 rounded-xl p-4 transition-all duration-200">
-                    <div class="grid grid-cols-12 gap-4 items-center">
+                    class="group relative bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/80 rounded-xl transition-all duration-200 mb-4">
+
+                    <!-- Main Row Content -->
+                    <div class="p-4 grid grid-cols-12 gap-4 items-center z-20 relative">
 
                         <!-- ISP -->
-                        <div class="col-span-2 flex items-center gap-3">
+                        <div class="col-span-3 flex items-center gap-3">
                             <div
-                                class="w-8 h-8 rounded bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700 font-bold text-gray-400 text-xs shadow-inner">
+                                class="w-8 h-8 rounded bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700 font-bold text-gray-400 text-xs shadow-inner shrink-0">
                                 <%= node.isp.charAt(0) %>
                             </div>
                             <span class="text-sm font-medium text-gray-200 truncate" title="<%= node.isp %>">
                                 <%= node.isp %>
                             </span>
-                        </div>
-
-                        <!-- ID -->
-                        <div class="col-span-2 font-mono text-xs text-gray-500 flex items-center gap-2">
-                            <span class="text-zinc-600">#</span>
-                            <%= node.id.substring(0, 8) %>...
-                                <!-- Copy icon could go here -->
                         </div>
 
                         <!-- CPU/Cores -->
@@ -304,6 +299,22 @@
                             </div>
                         </div>
 
+                        <!-- Network (Stacked) -->
+                        <div class="col-span-1 flex flex-col gap-1 justify-center">
+                            <div class="flex items-center gap-1 text-[10px] font-mono leading-none">
+                                <span class="text-emerald-500 text-[9px]">↓</span>
+                                <span class="text-gray-400">
+                                    <%= node.net_down.toFixed(1) %>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1 text-[10px] font-mono leading-none">
+                                <span class="text-blue-500 text-[9px]">↑</span>
+                                <span class="text-gray-400">
+                                    <%= node.net_up.toFixed(1) %>
+                                </span>
+                            </div>
+                        </div>
+
                         <!-- Status -->
                         <div class="col-span-1 flex justify-end">
                             <% if (node.status==='online' ) { %>
@@ -322,21 +333,26 @@
                         </div>
                     </div>
 
-                    <!-- Hover Details (Network & CPU Steal expansion) -->
+                    <!-- Persistent Footer (ID, Steal, Last Seen) -->
                     <div
-                        class="absolute inset-x-0 -bottom-8 bg-zinc-900 border-x border-b border-zinc-800 rounded-b-xl px-4 py-2 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-all z-10 pointer-events-none group-hover:pointer-events-auto shadow-xl">
-                        <div class="flex items-center gap-4 text-xs font-mono">
-                            <span class="text-gray-500">NET IN: <span class="text-emerald-400">↓<%=
-                                        node.net_down.toFixed(2) %> Mbps</span></span>
-                            <span class="text-gray-500">NET OUT: <span class="text-blue-400">↑<%= node.net_up.toFixed(2)
-                                        %> Mbps</span></span>
-                        </div>
-                        <div class="text-[10px] text-gray-500 font-mono">
-                            CPU STEAL: <span class="<%= node.cpu_steal > 10 ? 'text-red-400' : 'text-gray-400' %>">
-                                <%= node.cpu_steal.toFixed(2) %>%
+                        class="bg-zinc-950/30 border-t border-zinc-800/50 rounded-b-xl px-4 py-2 flex justify-between items-center z-10 relative">
+                        <div class="flex items-center gap-2 text-[10px] font-mono text-zinc-600">
+                            <span>ID:</span>
+                            <span class="text-zinc-500 select-all font-medium">
+                                <%= node.id %>
                             </span>
-                            <span class="mx-2">|</span>
-                            LAST SEEN: <%= new Date(node.last_seen).toLocaleTimeString() %>
+                        </div>
+
+                        <div class="flex items-center gap-4 text-[10px] text-gray-500 font-mono">
+                            <span>CPU STEAL: <span
+                                    class="<%= node.cpu_steal > 10 ? 'text-red-400' : 'text-zinc-500' %>">
+                                    <%= node.cpu_steal.toFixed(2) %>%
+                                </span></span>
+                            <span class="text-zinc-800">|</span>
+                            <span>SEEN: <span class="text-zinc-500">
+                                    <%= new Date(node.last_seen).toLocaleTimeString([], {hour: '2-digit' ,
+                                        minute:'2-digit'}) %>
+                                </span></span>
                         </div>
                     </div>
 
