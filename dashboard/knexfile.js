@@ -1,12 +1,17 @@
 const path = require('path');
 
+const migrations = {
+    directory: path.join(__dirname, 'migrations')
+};
+
 module.exports = {
     development: {
         client: 'better-sqlite3',
         connection: {
             filename: process.env.DB_PATH || path.join(__dirname, 'kiloa.db')
         },
-        useNullAsDefault: true
+        useNullAsDefault: true,
+        migrations
     },
     production: {
         client: 'pg',
@@ -15,8 +20,6 @@ module.exports = {
             min: 2,
             max: 10
         },
-        migrations: {
-            tableName: 'knex_migrations'
-        }
+        migrations
     }
 };
