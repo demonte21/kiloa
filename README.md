@@ -2,63 +2,69 @@
 
 **Simple, lightweight, open-source VPS monitoring.**
 
-Kiloa is a self-hosted monitoring solution written in Go. It consists of a central **Dashboard** to view your servers and a lightweight **Agent** to install on your VPS instances.
+Kiloa consists of a central **Dashboard** (Node.js) to view your servers and a lightweight **Agent** (Go) to install on your VPS instances.
 
 ![Dashboard Preview](dashboard_preview.png)
 
 ## Features
 - **Real-time Monitoring**: CPU, RAM, Disk, Network usage.
-- **Single Binary**: No dependencies, just one executable.
-- **Easy Deployment**: Runs on any Linux VPS (Ubuntu/Debian recommended).
-- **Modern UI**: Clean, dark-themed dashboard.
+- **Detailed Stats**: Historical graphs (24h), Load Average, Detailed System Info.
+- **Single Binary Agent**: No dependencies, just one executable on the VPS.
+- **Easy Deployment**: Docker ready (compatible with Coolify).
+- **Database Support**: SQLite (Dev) and PostgreSQL (Prod).
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Run the Dashboard
-You need a central server to host the dashboard.
+You can run the dashboard using Docker (Recommended) or locally with Node.js.
 
-1.  Clone this repository.
-2.  Build and run the dashboard:
-    ```bash
-    cd dashboard
-    go build -o dashboard main.go
-    ./dashboard
-    ```
-3.  The dashboard is available at `http://YOUR_SERVER_IP:8080`.
+#### Option A: Docker (Recommended)
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -e KILOA_TOKEN="secret" \
+  -v ./kiloa_data:/app/dashboard \
+  kiloa-dashboard
+```
+*Note: Mounting `-v` ensures your SQLite database persists across restarts. For production, consider using PostgreSQL.*
 
-**Note:** By default, the dashboard uses an SQLite database (`kiloa.db`) stored in the running directory.
+#### Option B: Node.js Local
+```bash
+cd dashboard
+npm install
+node server.js
+```
 
-### 2. Install the Agent on your VPS
-On every VPS you want to monitor, run this single command:
-
+### 2. Install the Agent
+On your VPS:
 ```bash
 curl -sL https://raw.githubusercontent.com/demonte21/kiloa/master/agent/install.sh | bash
 ```
-
-The script will interactively ask for your:
-- **Dashboard URL** (e.g., `http://YOUR-IP:8080`)
-- **Secret Token**
-- **Interval** (seconds)
-
-Alternatively, you can provide arguments directly to skip prompts:
+Follow the interactive prompts or pass arguments directly:
 ```bash
-curl -sL https://raw.githubusercontent.com/demonte21/kiloa/master/agent/install.sh | bash -s -- -s "http://YOUR-IP:8080" -t "your-secret" -i 5
+curl -sL https://raw.githubusercontent.com/demonte21/kiloa/master/agent/install.sh | bash -s -- -s "http://YOUR-IP:8080" -t "secret"
 ```
 
 ---
 
 ## 🛠️ Configuration
 
-**Agent Arguments:**
-- `-server`: URL of your Kiloa Dashboard (default: `http://localhost:8080`)
-- `-token`: Authentication token (default: `secret`). *Must match the dashboard.*
+### Environment Variables (Dashboard)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | Server port |
+| `KILOA_TOKEN` | `secret` | Authentication token for agents (Must match agent) |
+| `DB_CLIENT` | `better-sqlite3` | Database client: `better-sqlite3` (SQLite) or `pg` (PostgreSQL) |
+| `DATABASE_URL` | - | Connection string for PostgreSQL (Required if `DB_CLIENT=pg`) |
+| `DB_PATH` | `./kiloa.db` | Path for SQLite database file (if using SQLite) |
+
+### Agent Arguments
+- `-server`: URL of your Dashboard (e.g., `http://1.2.3.4:8080`)
+- `-token`: Auth token (default: `secret`)
 - `-id`: Custom Node ID (default: hostname)
 - `-interval`: Reporting interval in seconds (default: 2)
-
-**Dashboard Auth:**
-Currently, the token is hardcoded as `secret` in `dashboard/main.go`. Change this header check in the source code for production usage!
 
 ## License
 MIT

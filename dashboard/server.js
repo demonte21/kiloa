@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const db = require('./db');
+const db = require('./db'); // Knex instance
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -9,9 +9,13 @@ const AUTH_TOKEN = process.env.KILOA_TOKEN || 'secret';
 
 // Middleware
 app.use(express.json());
+// Serve static files (Tailwind CDN is used, but we might have local assets later)
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Health Check
+app.get('/health', (req, res) => res.send('OK'));
 
 // Helper: Format bytes to human readable
 function formatBytes(bytes) {
@@ -23,182 +27,268 @@ function formatBytes(bytes) {
 }
 
 // POST /api/report - Receive stats from agents
-app.post('/api/report', (req, res) => {
-    const token = req.headers.authorization;
-    if (token !== AUTH_TOKEN) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const data = req.body;
-    const nodeId = data.node_id;
-
-    if (!nodeId) {
-        return res.status(400).json({ error: 'Missing node_id' });
-    }
-
-    const now = new Date().toISOString();
-
-    // Check if node exists
-    const existing = db.prepare('SELECT id FROM nodes WHERE id = ?').get(nodeId);
-
-    if (existing) {
-        // Update existing node
-        db.prepare(`
-        UPDATE nodes SET
-            updated_at = ?,
-            last_seen = ?,
-            location = COALESCE(?, location),
-            isp = COALESCE(?, isp),
-            cores = COALESCE(?, cores),
-            load_1 = COALESCE(?, load_1),
-            load_5 = COALESCE(?, load_5),
-            load_15 = COALESCE(?, load_15),
-            mem_used = COALESCE(?, mem_used),
-            mem_total = COALESCE(?, mem_total),
-            disk_used = COALESCE(?, disk_used),
-            disk_total = COALESCE(?, disk_total),
-            cpu_steal = COALESCE(?, cpu_steal),
-            net_up = COALESCE(?, net_up),
-            net_down = COALESCE(?, net_down),
-            host_name = COALESCE(?, host_name),
-            os_distro = COALESCE(?, os_distro),
-            kernel_version = COALESCE(?, kernel_version),
-            cpu_model = COALESCE(?, cpu_model),
-            cpu_cores_detail = COALESCE(?, cpu_cores_detail),
-            boot_time = COALESCE(?, boot_time),
-            public_ip = COALESCE(?, public_ip)
-        WHERE id = ?
-        `).run(
-            now, now,
-            data.location, data.isp,
-            data.cores, data.load_1, data.load_5, data.load_15,
-            data.mem_used, data.mem_total, data.disk_used, data.disk_total,
-            data.cpu_steal, data.net_up, data.net_down,
-            data.host_name, data.os_distro, data.kernel_version, data.cpu_model, data.cpu_cores_detail, data.boot_time, data.public_ip,
-            nodeId
-        );
-    } else {
-        // Insert new node
-        db.prepare(`
-        INSERT INTO nodes (id, created_at, updated_at, last_seen, location, isp, cores, load_1, load_5, load_15, mem_used, mem_total, disk_used, disk_total, cpu_steal, net_up, net_down, host_name, os_distro, kernel_version, cpu_model, cpu_cores_detail, boot_time, public_ip)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-            nodeId, now, now, now,
-            data.location || 'Unknown', data.isp || 'Unknown',
-            data.cores || 0, data.load_1 || 0, data.load_5 || 0, data.load_15 || 0,
-            data.mem_used || 0, data.mem_total || 0, data.disk_used || 0, data.disk_total || 0,
-            data.cpu_steal || 0, data.net_up || 0, data.net_down || 0,
-            data.host_name || null, data.os_distro || null, data.kernel_version || null, data.cpu_model || null, data.cpu_cores_detail || null, data.boot_time || null, data.public_ip || null
-        );
-    }
-
-    // Insert into history (max 1 point per minute)
-    const lastHistory = db.prepare('SELECT timestamp FROM history WHERE node_id = ? ORDER BY timestamp DESC LIMIT 1').get(nodeId);
-    const shouldInsertHistory = !lastHistory || (new Date() - new Date(lastHistory.timestamp) > 60000); // 60s throttle
-
-    if (shouldInsertHistory) {
-        const memPercent = data.mem_total > 0 ? (data.mem_used / data.mem_total) * 100 : 0;
-        const diskPercent = data.disk_total > 0 ? (data.disk_used / data.disk_total) * 100 : 0;
-
-        db.prepare(`
-            INSERT INTO history (node_id, timestamp, load_1, mem_percent, disk_percent, net_in, net_out)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(nodeId, now, data.load_1 || 0, memPercent, diskPercent, data.net_down || 0, data.net_up || 0);
-
-        // Cleanup old history (keep only 24h) - basic cleanup occasionally
-        // Improve: Do this via a cron or less frequently to avoid overhead on every request
-        // For now, let's just keep it simple and maybe add cleanup later or do it with 1/100 probability
-        if (Math.random() < 0.01) {
-            db.prepare("DELETE FROM history WHERE timestamp < datetime('now', '-1 day')").run();
+app.post('/api/report', async (req, res) => {
+    try {
+        const token = req.headers.authorization;
+        if (token !== AUTH_TOKEN) {
+            return res.status(401).json({ error: 'Unauthorized' });
         }
-    }
 
-    res.json({ status: 'ok' });
+        const data = req.body;
+        const nodeId = data.node_id;
+
+        if (!nodeId) {
+            return res.status(400).json({ error: 'Missing node_id' });
+        }
+
+        const now = new Date();
+
+        // 1. Update/Insert Node
+        const existing = await db('nodes').where({ id: nodeId }).first();
+
+        const nodeData = {
+            updated_at: now,
+            last_seen: now,
+            // Use provided data or fallback to existing (if updating) or defaults (schema defaults handle 'Unknown')
+            // For updates, we only want to update fields that are present in data (and not null/undefined if possible)
+            // But usually agent sends complete data struct.
+            location: data.location,
+            isp: data.isp,
+            cores: data.cores || 0,
+            load_1: data.load_1 || 0,
+            load_5: data.load_5 || 0,
+            load_15: data.load_15 || 0,
+            mem_used: data.mem_used || 0,
+            mem_total: data.mem_total || 0,
+            disk_used: data.disk_used || 0,
+            disk_total: data.disk_total || 0,
+            cpu_steal: data.cpu_steal || 0,
+            net_up: data.net_up || 0,
+            net_down: data.net_down || 0,
+            // Static info - update if present
+            host_name: data.host_name,
+            os_distro: data.os_distro,
+            kernel_version: data.kernel_version,
+            cpu_model: data.cpu_model,
+            cpu_cores_detail: data.cpu_cores_detail,
+            boot_time: data.boot_time,
+            public_ip: data.public_ip
+        };
+
+        // Filter out undefined values to avoid overwriting with NULL if partial update (though usually full)
+        // Actually, if data.field is missing, it is undefined. Knex ignores undefined in update object? 
+        // Yes, Knex ignores undefined properties. So this is safe.
+        // But we need to handle "Unknown" defaults if creating new.
+
+        if (existing) {
+            await db('nodes').where({ id: nodeId }).update(nodeData);
+        } else {
+            // For insert, ensure ID is there
+            nodeData.id = nodeId;
+            nodeData.created_at = now;
+            // Defaults are handled by DB schema if undefined, but better to be explicit often.
+            // Knex insert: undefined values for columns with defaults will use defaults.
+            await db('nodes').insert(nodeData);
+        }
+
+        // 2. Insert into History (Throttled 1 min)
+        const lastHistory = await db('history')
+            .where({ node_id: nodeId })
+            .orderBy('timestamp', 'desc')
+            .first();
+
+        const lastTime = lastHistory ? new Date(lastHistory.timestamp) : new Date(0);
+        const shouldInsertHistory = (now - lastTime) > 60000; // 60s
+
+        if (shouldInsertHistory) {
+            const memPercent = data.mem_total > 0 ? (data.mem_used / data.mem_total) * 100 : 0;
+            const diskPercent = data.disk_total > 0 ? (data.disk_used / data.disk_total) * 100 : 0;
+
+            await db('history').insert({
+                node_id: nodeId,
+                timestamp: now,
+                load_1: data.load_1 || 0,
+                mem_percent: memPercent,
+                disk_percent: diskPercent,
+                net_in: data.net_down || 0, // Inverted naming in history vs report? report: net_down (IN), net_up (OUT)
+                net_out: data.net_up || 0
+            });
+
+            // Cleanup old history (random sample to prune)
+            if (Math.random() < 0.01) {
+                // 30 days retention
+                // Using JS Date object ensures compatibility with both SQLite and Postgres
+                const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                await db('history').where('timestamp', '<', cutoff).del();
+            }
+        }
+
+        res.json({ status: 'ok' });
+
+    } catch (err) {
+        console.error('API Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
 
 // GET / - Dashboard
-app.get('/', (req, res) => {
-    const nodes = db.prepare('SELECT * FROM nodes ORDER BY last_seen DESC').all();
+app.get('/', async (req, res) => {
+    try {
+        // Sort by position ASC, then host_name ASC (stable sort)
+        const nodes = await db('nodes').orderBy([
+            { column: 'position', order: 'asc' },
+            { column: 'id', order: 'asc' }
+        ]);
 
-    // Process nodes: add status and computed fields
-    const processedNodes = nodes.map(node => {
+        // Process nodes
+        const processedNodes = nodes.map(node => {
+            const lastSeen = new Date(node.last_seen);
+            const now = new Date();
+            const diffMs = now - lastSeen;
+            const diffMins = diffMs / 1000 / 60;
+
+            const memUsed = Number(node.mem_used);
+            const memTotal = Number(node.mem_total);
+            const diskUsed = Number(node.disk_used);
+            const diskTotal = Number(node.disk_total);
+
+            return {
+                ...node,
+                status: diffMins < 2 ? 'online' : 'offline',
+                memUsedGB: (memUsed / 1073741824).toFixed(2),
+                memTotalGB: (memTotal / 1073741824).toFixed(2),
+                memPercent: memTotal > 0 ? ((memUsed / memTotal) * 100).toFixed(1) : 0,
+                diskUsedGB: (diskUsed / 1073741824).toFixed(2),
+                diskTotalGB: (diskTotal / 1073741824).toFixed(2),
+                diskPercent: diskTotal > 0 ? ((diskUsed / diskTotal) * 100).toFixed(1) : 0,
+                loadPercent: node.cores > 0 ? ((node.load_1 / node.cores) * 100).toFixed(1) : 0,
+            };
+        });
+
+        // Aggregate stats
+        const stats = {
+            totalNodes: nodes.length,
+            memUsed: formatBytes(nodes.reduce((sum, n) => sum + Number(n.mem_used || 0), 0)),
+            memTotal: formatBytes(nodes.reduce((sum, n) => sum + Number(n.mem_total || 0), 0)),
+            diskUsed: formatBytes(nodes.reduce((sum, n) => sum + Number(n.disk_used || 0), 0)),
+            diskTotal: formatBytes(nodes.reduce((sum, n) => sum + Number(n.disk_total || 0), 0)),
+            netUp: nodes.reduce((sum, n) => sum + (n.net_up || 0), 0).toFixed(2),
+            netDown: nodes.reduce((sum, n) => sum + (n.net_down || 0), 0).toFixed(2),
+        };
+
+        res.render('index', { nodes: processedNodes, stats });
+
+    } catch (err) {
+        console.error('Dashboard Error:', err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+// POST /api/reorder - Update node positions
+app.post('/api/reorder', async (req, res) => {
+    try {
+        const token = req.headers.authorization;
+        // Simple auth check if needed, or rely on session if we had one.
+        // For now, assuming this is an internal/admin action. 
+        // If public dashboard, maybe protect this with a simple key or assume allowed fn.
+        // Given current simplified context, we'll proceed.
+
+        const { order } = req.body; // Array of IDs ['id1', 'id2', ...]
+
+        if (!Array.isArray(order)) {
+            return res.status(400).json({ error: 'Invalid order format' });
+        }
+
+        // Transaction to ensure integrity
+        await db.transaction(async trx => {
+            for (let i = 0; i < order.length; i++) {
+                await trx('nodes')
+                    .where({ id: order[i] })
+                    .update({ position: i });
+            }
+        });
+
+        res.json({ status: 'ok' });
+
+    } catch (err) {
+        console.error('Reorder Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/nodes
+app.get('/api/nodes', async (req, res) => {
+    try {
+        const nodes = await db('nodes')
+            .orderBy([
+                { column: 'position', order: 'asc' },
+                { column: 'id', order: 'asc' }
+            ]);
+        res.json(nodes);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /node/:id - Node Detail Page
+app.get('/node/:id', async (req, res) => {
+    try {
+        const node = await db('nodes').where({ id: req.params.id }).first();
+        if (!node) return res.status(404).send('Node not found');
+
         const lastSeen = new Date(node.last_seen);
         const now = new Date();
         const diffMs = now - lastSeen;
         const diffMins = diffMs / 1000 / 60;
 
-        return {
-            ...node,
-            status: diffMins < 2 ? 'online' : 'offline',
-            memUsedGB: (node.mem_used / 1073741824).toFixed(2),
-            memTotalGB: (node.mem_total / 1073741824).toFixed(2),
-            memPercent: node.mem_total > 0 ? ((node.mem_used / node.mem_total) * 100).toFixed(1) : 0,
-            diskUsedGB: (node.disk_used / 1073741824).toFixed(2),
-            diskTotalGB: (node.disk_total / 1073741824).toFixed(2),
-            diskPercent: node.disk_total > 0 ? ((node.disk_used / node.disk_total) * 100).toFixed(1) : 0,
-            loadPercent: node.cores > 0 ? ((node.load_1 / node.cores) * 100).toFixed(1) : 0,
-        };
-    });
+        node.status = diffMins < 2 ? 'online' : 'offline';
+        node.memUsedGB = (Number(node.mem_used) / 1073741824).toFixed(2);
+        node.memTotalGB = (Number(node.mem_total) / 1073741824).toFixed(2);
 
-    // Aggregate stats
-    const stats = {
-        totalNodes: nodes.length,
-        memUsed: formatBytes(nodes.reduce((sum, n) => sum + (n.mem_used || 0), 0)),
-        memTotal: formatBytes(nodes.reduce((sum, n) => sum + (n.mem_total || 0), 0)),
-        diskUsed: formatBytes(nodes.reduce((sum, n) => sum + (n.disk_used || 0), 0)),
-        diskTotal: formatBytes(nodes.reduce((sum, n) => sum + (n.disk_total || 0), 0)),
-        netUp: nodes.reduce((sum, n) => sum + (n.net_up || 0), 0).toFixed(2),
-        netDown: nodes.reduce((sum, n) => sum + (n.net_down || 0), 0).toFixed(2),
-    };
+        // Format Uptime
+        let uptimeStr = "Unknown";
+        if (node.boot_time) {
+            const bootDate = new Date(Number(node.boot_time) * 1000);
+            const uptimeMs = now - bootDate;
+            const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
+            const uptimeHours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            uptimeStr = `${uptimeDays} days, ${uptimeHours} hours`;
+        }
 
-    res.render('index', { nodes: processedNodes, stats });
-});
+        res.render('detail', { node, uptimeStr });
 
-// GET /api/nodes - JSON endpoint for polling
-app.get('/api/nodes', (req, res) => {
-    const nodes = db.prepare('SELECT * FROM nodes ORDER BY last_seen DESC').all();
-    res.json(nodes);
-});
-
-// GET /node/:id - Node Detail Page
-app.get('/node/:id', (req, res) => {
-    const node = db.prepare('SELECT * FROM nodes WHERE id = ?').get(req.params.id);
-    if (!node) return res.status(404).send('Node not found');
-
-    // Process single node for view (reuse logic if possible, but keep simple)
-    const lastSeen = new Date(node.last_seen);
-    const now = new Date();
-    const diffMs = now - lastSeen;
-    const diffMins = diffMs / 1000 / 60;
-
-    node.status = diffMins < 2 ? 'online' : 'offline';
-    node.memUsedGB = (node.mem_used / 1073741824).toFixed(2);
-    node.memTotalGB = (node.mem_total / 1073741824).toFixed(2);
-
-    // Format Uptime
-    let uptimeStr = "Unknown";
-    if (node.boot_time) {
-        const bootDate = new Date(node.boot_time * 1000);
-        const uptimeMs = now - bootDate;
-        const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
-        const uptimeHours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        uptimeStr = `${uptimeDays} days, ${uptimeHours} hours`;
+    } catch (err) {
+        console.error('Detail Page Error:', err);
+        res.status(500).send('Internal Server Error');
     }
-
-    res.render('detail', { node, uptimeStr });
 });
 
 // GET /api/node/:id/history - JSON for charts
-app.get('/api/node/:id/history', (req, res) => {
-    const history = db.prepare(`
-        SELECT timestamp, load_1, mem_percent, disk_percent, net_in, net_out 
-        FROM history 
-        WHERE node_id = ? AND timestamp > datetime('now', '-24 hours')
-        ORDER BY timestamp ASC
-    `).all(req.params.id);
-    res.json(history);
-});
+app.get('/api/node/:id/history', async (req, res) => {
+    try {
+        const range = req.query.range || '24h';
+        let ms = 24 * 60 * 60 * 1000; // Default 24h
 
+        if (range === '7d') {
+            ms = 7 * 24 * 60 * 60 * 1000;
+        } else if (range === '30d') {
+            ms = 30 * 24 * 60 * 60 * 1000;
+        }
+
+        const cutoff = new Date(Date.now() - ms);
+
+        const history = await db('history')
+            .select('timestamp', 'load_1', 'mem_percent', 'disk_percent', 'net_in', 'net_out')
+            .where('node_id', req.params.id)
+            .andWhere('timestamp', '>', cutoff)
+            .orderBy('timestamp', 'asc');
+
+        res.json(history);
+    } catch (err) {
+        console.error('History API Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Start server
 app.listen(PORT, () => {
