@@ -14,6 +14,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Health Check
+app.get('/health', (req, res) => res.send('OK'));
+
 // Helper: Format bytes to human readable
 function formatBytes(bytes) {
     if (bytes === 0) return '0 B';
