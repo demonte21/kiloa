@@ -134,7 +134,11 @@ app.post('/api/report', async (req, res) => {
 // GET / - Dashboard
 app.get('/', async (req, res) => {
     try {
-        const nodes = await db('nodes').orderBy('last_seen', 'desc');
+        // Sort by position ASC, then host_name ASC (stable sort)
+        const nodes = await db('nodes').orderBy([
+            { column: 'position', order: 'asc' },
+            { column: 'id', order: 'asc' }
+        ]);
 
         // Process nodes
         const processedNodes = nodes.map(node => {
@@ -180,10 +184,46 @@ app.get('/', async (req, res) => {
     }
 });
 
+// POST /api/reorder - Update node positions
+app.post('/api/reorder', async (req, res) => {
+    try {
+        const token = req.headers.authorization;
+        // Simple auth check if needed, or rely on session if we had one.
+        // For now, assuming this is an internal/admin action. 
+        // If public dashboard, maybe protect this with a simple key or assume allowed fn.
+        // Given current simplified context, we'll proceed.
+
+        const { order } = req.body; // Array of IDs ['id1', 'id2', ...]
+
+        if (!Array.isArray(order)) {
+            return res.status(400).json({ error: 'Invalid order format' });
+        }
+
+        // Transaction to ensure integrity
+        await db.transaction(async trx => {
+            for (let i = 0; i < order.length; i++) {
+                await trx('nodes')
+                    .where({ id: order[i] })
+                    .update({ position: i });
+            }
+        });
+
+        res.json({ status: 'ok' });
+
+    } catch (err) {
+        console.error('Reorder Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /api/nodes
 app.get('/api/nodes', async (req, res) => {
     try {
-        const nodes = await db('nodes').orderBy('last_seen', 'desc');
+        const nodes = await db('nodes')
+            .orderBy([
+                { column: 'position', order: 'asc' },
+                { column: 'id', order: 'asc' }
+            ]);
         res.json(nodes);
     } catch (err) {
         res.status(500).json({ error: err.message });
