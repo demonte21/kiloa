@@ -168,12 +168,14 @@
             <div class="flex items-center gap-4">
                 <div class="flex flex-col">
                     <span class="text-xs text-gray-500 uppercase">Ingress</span>
-                    <span class="text-lg font-mono text-emerald-400">↓<%= stats.netDown %></span>
+                    <span class="text-lg font-mono text-emerald-400">↓<%= stats.netDown %> <span
+                                class="text-xs text-gray-500">Mbps</span></span>
                 </div>
                 <div class="w-px h-8 bg-zinc-800"></div>
                 <div class="flex flex-col">
                     <span class="text-xs text-gray-500 uppercase">Egress</span>
-                    <span class="text-lg font-mono text-blue-400">↑<%= stats.netUp %></span>
+                    <span class="text-lg font-mono text-blue-400">↑<%= stats.netUp %> <span
+                                class="text-xs text-gray-500">Mbps</span></span>
                 </div>
             </div>
         </div>
@@ -304,13 +306,13 @@
                             <div class="flex items-center gap-1 text-[10px] font-mono leading-none">
                                 <span class="text-emerald-500 text-[9px]">↓</span>
                                 <span class="text-gray-400">
-                                    <%= node.net_down.toFixed(1) %>
+                                    <%= node.net_down.toFixed(1) %> <span class="text-[9px] text-zinc-600">Mbps</span>
                                 </span>
                             </div>
                             <div class="flex items-center gap-1 text-[10px] font-mono leading-none">
                                 <span class="text-blue-500 text-[9px]">↑</span>
                                 <span class="text-gray-400">
-                                    <%= node.net_up.toFixed(1) %>
+                                    <%= node.net_up.toFixed(1) %> <span class="text-[9px] text-zinc-600">Mbps</span>
                                 </span>
                             </div>
                         </div>
