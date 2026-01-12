@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiloa Fleet Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        kiloa: {
+                            bg: '#09090b',         // Zinc 950
+                            card: '#18181b',       // Zinc 900
+                            cardHover: '#27272a',  // Zinc 800
+                            border: '#3f3f46',     // Zinc 700
+                            primary: '#8b5cf6',    // Violet 500
+                            success: '#10b981',    // Emerald 500
+                            danger: '#ef4444',     // Red 500
+                            warning: '#f59e0b',    // Amber 500
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            /* Deep Black */
+            color: #d4d4d8;
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, transparent 40%);
+        }
+
+        .stat-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(63, 63, 70, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8 min-h-screen">
+
+    <!-- Top Navigation / Branding -->
+    <header class="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+                <span class="w-2 h-8 bg-kiloa-primary rounded-full"></span>
+                Kiloa <span class="text-gray-500 font-light">Fleet Manager</span>
+            </h1>
+            <p class="text-gray-500 mt-1 font-mono text-sm">INFRASTRUCTURE HEARTBEAT</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span
+                class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono text-gray-400">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                LIVE STREAM
+            </span>
+        </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <div class="max-w-7xl mx-auto mb-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- Active Agents -->
+        <div class="stat-card rounded-2xl p-5">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-zinc-900 rounded-lg text-gray-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                        </path>
+                    </svg>
+                </div>
+                <span class="text-xs font-mono text-gray-500">FLEET SIZE</span>
+            </div>
+            <div class="flex items-end gap-2">
+                <span class="text-4xl font-bold text-white">
+                    <%= stats.totalNodes %>
+                </span>
+                <span class="text-sm text-gray-400 mb-1">active units</span>
+            </div>
+        </div>
+
+        <!-- RAM -->
+        <div class="stat-card rounded-2xl p-5">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-zinc-900 rounded-lg text-blue-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z">
+                        </path>
+                    </svg>
+                </div>
+                <span class="text-xs font-mono text-gray-500">MEMORY LOAD</span>
+            </div>
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-end">
+                    <span class="text-2xl font-bold text-white">
+                        <%= stats.memUsed %>
+                    </span>
+                    <span class="text-xs text-gray-500 mb-1">of <%= stats.memTotal %></span>
+                </div>
+                <!-- Mini Progress Bar for Aggregate -->
+                <div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500" style="width: 45%"></div> <!-- Placeholder % or calc in backend -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Disk -->
+        <div class="stat-card rounded-2xl p-5">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-zinc-900 rounded-lg text-purple-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+                        </path>
+                    </svg>
+                </div>
+                <span class="text-xs font-mono text-gray-500">STORAGE DEPLOYED</span>
+            </div>
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-end">
+                    <span class="text-2xl font-bold text-white">
+                        <%= stats.diskUsed %>
+                    </span>
+                    <span class="text-xs text-gray-500 mb-1">of <%= stats.diskTotal %></span>
+                </div>
+                <div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-purple-500" style="width: 30%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network -->
+        <div class="stat-card rounded-2xl p-5">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-zinc-900 rounded-lg text-emerald-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <span class="text-xs font-mono text-gray-500">TRAFFIC FLOW</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col">
+                    <span class="text-xs text-gray-500 uppercase">Ingress</span>
+                    <span class="text-lg font-mono text-emerald-400">↓<%= stats.netDown %> <span
+                                class="text-xs text-gray-500">Mbps</span></span>
+                </div>
+                <div class="w-px h-8 bg-zinc-800"></div>
+                <div class="flex flex-col">
+                    <span class="text-xs text-gray-500 uppercase">Egress</span>
+                    <span class="text-lg font-mono text-blue-400">↑<%= stats.netUp %> <span
+                                class="text-xs text-gray-500">Mbps</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Filters (Redesigned) -->
+        <div class="mb-6 flex items-center gap-2">
+            <button
+                class="px-4 py-2 bg-zinc-900 border border-zinc-700 text-white rounded-lg text-xs font-medium hover:border-kiloa-primary transition shadow-lg shadow-purple-900/10 active:scale-95">
+                Global View
+            </button>
+            <button
+                class="px-4 py-2 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 text-gray-500 rounded-lg text-xs font-medium transition">
+                North America
+            </button>
+            <button
+                class="px-4 py-2 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 text-gray-500 rounded-lg text-xs font-medium transition">
+                Europe
+            </button>
+            <!-- Add search -->
+            <div class="ml-auto relative">
+                <input type="text" placeholder="Search node ID..."
+                    class="bg-zinc-900/50 border border-zinc-800 text-xs text-gray-300 rounded-lg px-3 py-2 w-48 focus:outline-none focus:border-gray-600 transition">
+            </div>
+        </div>
+
+        <!-- Table (Redesigned as Floating Rows) -->
+        <div class="space-y-4">
+
+            <!-- Header Row -->
+            <div
+                class="grid grid-cols-12 gap-4 px-6 py-2 text-xs font-mono font-medium text-gray-500 uppercase tracking-wider">
+                <div class="col-span-3">Provider / ISP</div>
+                <div class="col-span-1 text-center">CPU</div>
+                <div class="col-span-2">Load</div>
+                <div class="col-span-2">Memory</div>
+                <div class="col-span-2">Storage</div>
+                <div class="col-span-1">Network</div>
+                <div class="col-span-1 text-right">State</div>
+            </div>
+
+            <!-- Client Rows (Clickable) -->
+            <% nodes.forEach(function(node) { %>
+                <a href="/node/<%= node.id %>"
+                    class="block group relative bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/80 rounded-xl transition-all duration-200 mb-4 cursor-pointer no-underline">
+
+                    <!-- Main Row Content -->
+                    <div class="p-4 grid grid-cols-12 gap-4 items-center z-20 relative">
+
+                        <!-- ISP -->
+                        <div class="col-span-3 flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700 font-bold text-gray-400 text-xs shadow-inner shrink-0">
+                                <%= node.isp.charAt(0) %>
+                            </div>
+                            <span class="text-sm font-medium text-gray-200 truncate" title="<%= node.isp %>">
+                                <%= node.isp %>
+                            </span>
+                        </div>
+
+                        <!-- CPU/Cores -->
+                        <div class="col-span-1 text-center">
+                            <span class="text-xs font-bold text-gray-300 bg-zinc-800 px-2 py-1 rounded">
+                                <%= node.cores %>c
+                            </span>
+                        </div>
+
+                        <!-- Load -->
+                        <div class="col-span-2">
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex justify-between text-[10px] items-center">
+                                    <span class="text-gray-400 font-mono">
+                                        <%= node.load_1.toFixed(2) %>
+                                    </span>
+                                    <span class="text-zinc-600 font-mono text-[9px]">
+                                        <%= node.loadPercent %>%
+                                    </span>
+                                </div>
+                                <div class="h-1 bg-zinc-800 rounded-full overflow-hidden w-3/4">
+                                    <div class="h-full bg-amber-500 transition-all duration-500"
+                                        style="width: <%= Math.min(node.loadPercent, 100) %>%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RAM -->
+                        <div class="col-span-2">
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex justify-between text-[10px] items-center">
+                                    <span class="text-gray-300">
+                                        <%= node.memUsedGB %>G
+                                    </span>
+                                    <span class="text-zinc-600">
+                                        <%= node.memTotalGB %>G
+                                    </span>
+                                </div>
+                                <div class="h-1 bg-zinc-800 rounded-full overflow-hidden w-11/12">
+                                    <div class="h-full bg-blue-500 transition-all duration-500"
+                                        style="width: <%= node.memPercent %>%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disk -->
+                        <div class="col-span-2">
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex justify-between text-[10px] items-center">
+                                    <span class="text-gray-300">
+                                        <%= node.diskUsedGB %>G
+                                    </span>
+                                    <span class="text-zinc-600">
+                                        <%= node.diskTotalGB %>G
+                                    </span>
+                                </div>
+                                <div class="h-1 bg-zinc-800 rounded-full overflow-hidden w-11/12">
+                                    <div class="h-full bg-purple-500 transition-all duration-500"
+                                        style="width: <%= node.diskPercent %>%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Network (Stacked) -->
+                        <div class="col-span-1 flex flex-col gap-1 justify-center">
+                            <div class="flex items-center gap-1 text-[10px] font-mono leading-none">
+                                <span class="text-emerald-500 text-[9px]">↓</span>
+                                <span class="text-gray-400">
+                                    <%= node.net_down.toFixed(1) %> <span class="text-[9px] text-zinc-600">Mbps</span>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1 text-[10px] font-mono leading-none">
+                                <span class="text-blue-500 text-[9px]">↑</span>
+                                <span class="text-gray-400">
+                                    <%= node.net_up.toFixed(1) %> <span class="text-[9px] text-zinc-600">Mbps</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-span-1 flex justify-end">
+                            <% if (node.status==='online' ) { %>
+                                <span
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    Live
+                                </span>
+                                <% } else { %>
+                                    <span
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                        Down
+                                    </span>
+                                    <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Persistent Footer (ID, Steal, Last Seen) -->
+                    <div
+                        class="bg-zinc-950/30 border-t border-zinc-800/50 rounded-b-xl px-4 py-2 flex justify-between items-center z-10 relative">
+                        <div class="flex items-center gap-2 text-[10px] font-mono text-zinc-600">
+                            <span>ID:</span>
+                            <span class="text-zinc-500 select-all font-medium">
+                                <%= node.id %>
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-4 text-[10px] text-gray-500 font-mono">
+                            <span>CPU STEAL: <span
+                                    class="<%= node.cpu_steal > 10 ? 'text-red-400' : 'text-zinc-500' %>">
+                                    <%= node.cpu_steal.toFixed(2) %>%
+                                </span></span>
+                            <span class="text-zinc-800">|</span>
+                            <span>SEEN: <span class="text-zinc-500">
+                                    <%= new Date(node.last_seen).toLocaleTimeString([], {hour: '2-digit' ,
+                                        minute:'2-digit'}) %>
+                                </span></span>
+                        </div>
+                    </div>
+
+                </a>
+                <% }); %>
+
+        </div>
+    </div>
+
+    <script>
+        // Auto-reload every 5 seconds
+        setTimeout(function () {
+            window.location.reload();
+        }, 5000);
+    </script>
+</body>
+
+</html>
