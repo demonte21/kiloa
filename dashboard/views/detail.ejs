@@ -161,10 +161,16 @@
                     <div id="chart-load" class="h-64"></div>
                 </div>
 
-                <!-- RAM / Disk Chart -->
+                <!-- RAM Chart -->
                 <div class="stat-card rounded-2xl p-6">
-                    <h3 class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">Memory & Disk Usage</h3>
+                    <h3 class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">Memory Usage</h3>
                     <div id="chart-ram" class="h-64"></div>
+                </div>
+
+                <!-- Disk Chart -->
+                <div class="stat-card rounded-2xl p-6">
+                    <h3 class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">Disk Usage</h3>
+                    <div id="chart-disk" class="h-64"></div>
                 </div>
 
                 <!-- Network Chart -->
@@ -205,8 +211,19 @@
                         axisBorder: { show: false },
                         axisTicks: { show: false }
                     },
+                    yaxis: {
+                        labels: {
+                            formatter: (value) => value.toFixed(1)
+                        }
+                    },
                     grid: { borderColor: '#27272a', strokeDashArray: 4 },
-                    fill: { type: 'gradient', gradient: { opacityFrom: 0.5, opacityTo: 0.05 } }
+                    fill: { type: 'gradient', gradient: { opacityFrom: 0.5, opacityTo: 0.05 } },
+                    tooltip: {
+                        theme: 'dark',
+                        y: {
+                            formatter: (value) => value.toFixed(2)
+                        }
+                    }
                 };
 
                 // Load Chart
@@ -219,11 +236,15 @@
                 // RAM Chart
                 new ApexCharts(document.querySelector("#chart-ram"), {
                     ...commonOptions,
-                    series: [
-                        { name: 'RAM Usage %', data: data.map(d => d.mem_percent) },
-                        { name: 'Disk Usage %', data: data.map(d => d.disk_percent) }
-                    ],
-                    colors: ['#3b82f6', '#a855f7']
+                    series: [{ name: 'RAM Usage %', data: data.map(d => d.mem_percent) }],
+                    colors: ['#3b82f6']
+                }).render();
+
+                // Disk Chart
+                new ApexCharts(document.querySelector("#chart-disk"), {
+                    ...commonOptions,
+                    series: [{ name: 'Disk Usage %', data: data.map(d => d.disk_percent) }],
+                    colors: ['#a855f7']
                 }).render();
 
                 // Network Chart
