@@ -66,6 +66,20 @@
                     </h1>
                 </div>
             </div>
+
+            <div class="flex items-center gap-2 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+                <button onclick="updateRange('24h')" id="btn-24h"
+                    class="px-3 py-1 text-xs font-medium rounded-md transition bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700">24h</button>
+                <button onclick="updateRange('7d')" id="btn-7d"
+                    class="px-3 py-1 text-xs font-medium rounded-md transition text-zinc-400 hover:text-white hover:bg-zinc-800">7d</button>
+                <button onclick="updateRange('30d')" id="btn-30d"
+                    class="px-3 py-1 text-xs font-medium rounded-md transition text-zinc-400 hover:text-white hover:bg-zinc-800">30d</button>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-8">
+            <div class="hidden"></div>
+            <!-- Spacer to maintain layout if needed, but flex-col on mobile might be better -->
             <% if (node.status==='online' ) { %>
                 <span
                     class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.2)]">
@@ -156,7 +170,10 @@
 
                 <!-- Load / CPU Chart -->
                 <div class="stat-card rounded-2xl p-6">
-                    <h3 class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">System Load (24 Hours)
+                    <h3
+                        class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4 flex justify-between items-center">
+                        <span>System Load</span>
+                        <span id="range-label" class="text-xs text-zinc-600">24 Hours</span>
                     </h3>
                     <div id="chart-load" class="h-64"></div>
                 </div>
@@ -185,78 +202,107 @@
     </div>
 
     <script>
-        // Fetch history data
-        fetch('/api/node/<%= node.id %>/history')
-            .then(res => res.json())
-            .then(data => {
-                const times = data.map(d => new Date(d.timestamp).getTime());
+        let charts = {};
 
-                // Common options
-                const commonOptions = {
-                    chart: {
-                        type: 'area',
-                        height: 250,
-                        toolbar: { show: false },
-                        background: 'transparent',
-                        zoom: { enabled: false }
-                    },
-                    theme: { mode: 'dark' },
-                    dataLabels: { enabled: false },
-                    stroke: { curve: 'smooth', width: 2 },
-                    xaxis: {
-                        type: 'datetime',
-                        categories: times,
-                        labels: { datetimeFormatter: { day: 'dd MMM', hour: 'HH:mm' } },
-                        tooltip: { enabled: false },
-                        axisBorder: { show: false },
-                        axisTicks: { show: false }
-                    },
-                    yaxis: {
-                        labels: {
-                            formatter: (value) => value.toFixed(1)
-                        }
-                    },
-                    grid: { borderColor: '#27272a', strokeDashArray: 4 },
-                    fill: { type: 'gradient', gradient: { opacityFrom: 0.5, opacityTo: 0.05 } },
-                    tooltip: {
-                        theme: 'dark',
-                        y: {
-                            formatter: (value) => value.toFixed(2)
-                        }
-                    }
-                };
-
-                // Load Chart
-                new ApexCharts(document.querySelector("#chart-load"), {
-                    ...commonOptions,
-                    series: [{ name: 'Load Average (1m)', data: data.map(d => d.load_1) }],
-                    colors: ['#f59e0b']
-                }).render();
-
-                // RAM Chart
-                new ApexCharts(document.querySelector("#chart-ram"), {
-                    ...commonOptions,
-                    series: [{ name: 'RAM Usage %', data: data.map(d => d.mem_percent) }],
-                    colors: ['#3b82f6']
-                }).render();
-
-                // Disk Chart
-                new ApexCharts(document.querySelector("#chart-disk"), {
-                    ...commonOptions,
-                    series: [{ name: 'Disk Usage %', data: data.map(d => d.disk_percent) }],
-                    colors: ['#a855f7']
-                }).render();
-
-                // Network Chart
-                new ApexCharts(document.querySelector("#chart-net"), {
-                    ...commonOptions,
-                    series: [
-                        { name: 'Inbound (Mbps)', data: data.map(d => d.net_in) },
-                        { name: 'Outbound (Mbps)', data: data.map(d => d.net_out) }
-                    ],
-                    colors: ['#10b981', '#ef4444']
-                }).render();
+        function updateRange(range) {
+            // Update buttons
+            document.querySelectorAll('button[id^="btn-"]').forEach(btn => {
+                btn.className = 'px-3 py-1 text-xs font-medium rounded-md transition text-zinc-400 hover:text-white hover:bg-zinc-800';
             });
+            const activeBtn = document.getElementById(`btn-${range}`);
+            activeBtn.className = 'px-3 py-1 text-xs font-medium rounded-md transition bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700';
+
+            // Update Label
+            const labels = { '24h': '24 Hours', '7d': '7 Days', '30d': '30 Days' };
+            document.getElementById('range-label').textContent = labels[range];
+
+            fetchData(range);
+        }
+
+        function fetchData(range = '24h') {
+            fetch(`/api/node/<%= node.id %>/history?range=${range}`)
+                .then(res => res.json())
+                .then(data => {
+                    const times = data.map(d => new Date(d.timestamp).getTime());
+
+                    // Common options
+                    const commonOptions = {
+                        chart: {
+                            type: 'area',
+                            height: 250,
+                            toolbar: { show: false },
+                            background: 'transparent',
+                            zoom: { enabled: false },
+                            animations: { enabled: false } // Disable animation for smoother updates
+                        },
+                        theme: { mode: 'dark' },
+                        dataLabels: { enabled: false },
+                        stroke: { curve: 'smooth', width: 2 },
+                        xaxis: {
+                            type: 'datetime',
+                            categories: times,
+                            labels: { datetimeFormatter: { day: 'dd MMM', hour: 'HH:mm' } },
+                            tooltip: { enabled: false },
+                            axisBorder: { show: false },
+                            axisTicks: { show: false }
+                        },
+                        yaxis: {
+                            labels: {
+                                formatter: (value) => value.toFixed(1)
+                            }
+                        },
+                        grid: { borderColor: '#27272a', strokeDashArray: 4 },
+                        fill: { type: 'gradient', gradient: { opacityFrom: 0.5, opacityTo: 0.05 } },
+                        tooltip: {
+                            theme: 'dark',
+                            y: {
+                                formatter: (value) => value.toFixed(2)
+                            },
+                            x: {
+                                format: 'dd MMM HH:mm'
+                            }
+                        }
+                    };
+
+                    renderChart('chart-load', {
+                        ...commonOptions,
+                        series: [{ name: 'Load Average (1m)', data: data.map(d => d.load_1) }],
+                        colors: ['#f59e0b']
+                    });
+
+                    renderChart('chart-ram', {
+                        ...commonOptions,
+                        series: [{ name: 'RAM Usage %', data: data.map(d => d.mem_percent) }],
+                        colors: ['#3b82f6']
+                    });
+
+                    renderChart('chart-disk', {
+                        ...commonOptions,
+                        series: [{ name: 'Disk Usage %', data: data.map(d => d.disk_percent) }],
+                        colors: ['#a855f7']
+                    });
+
+                    renderChart('chart-net', {
+                        ...commonOptions,
+                        series: [
+                            { name: 'Inbound (Mbps)', data: data.map(d => d.net_in) },
+                            { name: 'Outbound (Mbps)', data: data.map(d => d.net_out) }
+                        ],
+                        colors: ['#10b981', '#ef4444']
+                    });
+                });
+        }
+
+        function renderChart(id, options) {
+            if (charts[id]) {
+                charts[id].destroy();
+            }
+            charts[id] = new ApexCharts(document.querySelector(`#${id}`), options);
+            charts[id].render();
+        }
+
+        // Initial Load
+        fetchData('24h');
     </script>
 </body>
 

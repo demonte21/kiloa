@@ -113,8 +113,9 @@ app.post('/api/report', async (req, res) => {
 
             // Cleanup old history (random sample to prune)
             if (Math.random() < 0.01) {
-                // 24h retention
-                const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                // 30 days retention
+                // Using JS Date object ensures compatibility with both SQLite and Postgres
+                const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
                 await db('history').where('timestamp', '<', cutoff).del();
             }
         }
@@ -222,7 +223,17 @@ app.get('/node/:id', async (req, res) => {
 // GET /api/node/:id/history - JSON for charts
 app.get('/api/node/:id/history', async (req, res) => {
     try {
-        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const range = req.query.range || '24h';
+        let ms = 24 * 60 * 60 * 1000; // Default 24h
+
+        if (range === '7d') {
+            ms = 7 * 24 * 60 * 60 * 1000;
+        } else if (range === '30d') {
+            ms = 30 * 24 * 60 * 60 * 1000;
+        }
+
+        const cutoff = new Date(Date.now() - ms);
+
         const history = await db('history')
             .select('timestamp', 'load_1', 'mem_percent', 'disk_percent', 'net_in', 'net_out')
             .where('node_id', req.params.id)
