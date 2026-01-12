@@ -137,8 +137,9 @@ func (c *Collector) Collect(cfg Config) (*SystemStats, error) {
 				bytesSent := float64(netIO[0].BytesSent - c.lastNet[0].BytesSent)
 				bytesRecv := float64(netIO[0].BytesRecv - c.lastNet[0].BytesRecv)
 
-				stats.NetUp = (bytesSent / 1024 / 1024) / duration
-				stats.NetDown = (bytesRecv / 1024 / 1024) / duration
+				// Mbps (Megabits per second) = (Bytes * 8) / 1,000,000
+				stats.NetUp = (bytesSent * 8 / 1_000_000) / duration
+				stats.NetDown = (bytesRecv * 8 / 1_000_000) / duration
 			}
 		}
 		c.lastNet = netIO

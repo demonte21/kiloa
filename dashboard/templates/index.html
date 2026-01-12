@@ -74,7 +74,7 @@
                 <div class="text-xl font-bold text-white">
                     <span class="text-red-400">↑ {{ printf "%.2f" .Stats.NetUp }}</span>
                     <span class="text-green-400 ml-2">↓ {{ printf "%.2f" .Stats.NetDown }}</span>
-                    <span class="text-xs text-gray-500">MB/s</span>
+                    <span class="text-xs text-gray-500">Mbps</span>
                 </div>
             </div>
         </div>
@@ -150,8 +150,8 @@
                             .CPUSteal }}%</td>
                         <td class="px-6 py-4 font-mono text-xs">
                             <div class="flex flex-col">
-                                <span class="text-red-400">↑ {{ printf "%.2f" .NetUp }} MB/s</span>
-                                <span class="text-green-400">↓ {{ printf "%.2f" .NetDown }} MB/s</span>
+                                <span class="text-red-400">↑ {{ printf "%.2f" .NetUp }} Mbps</span>
+                                <span class="text-green-400">↓ {{ printf "%.2f" .NetDown }} Mbps</span>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-right">
