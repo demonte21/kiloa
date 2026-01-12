@@ -1,52 +1,69 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const knexConfig = require('./knexfile');
+const environment = process.env.NODE_ENV || 'development';
+const knex = require('knex')(knexConfig[environment]);
 
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'kiloa.db');
-const db = new Database(dbPath);
+// Initialize tables
+async function init() {
+  try {
+    const hasNodes = await knex.schema.hasTable('nodes');
+    if (!hasNodes) {
+      console.log('Creating nodes table...');
+      await knex.schema.createTable('nodes', table => {
+        table.string('id').primary();
+        table.timestamp('created_at').defaultTo(knex.fn.now());
+        table.timestamp('updated_at').defaultTo(knex.fn.now());
+        table.timestamp('last_seen').defaultTo(knex.fn.now());
 
-// Create table if not exists
-db.exec(`
-  CREATE TABLE IF NOT EXISTS nodes (
-    id TEXT PRIMARY KEY,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now')),
-    location TEXT DEFAULT 'Unknown',
-    isp TEXT DEFAULT 'Unknown',
-    last_seen TEXT DEFAULT (datetime('now')),
-    cores INTEGER DEFAULT 0,
-    load_1 REAL DEFAULT 0,
-    load_5 REAL DEFAULT 0,
-    load_15 REAL DEFAULT 0,
-    mem_used INTEGER DEFAULT 0,
-    mem_total INTEGER DEFAULT 0,
-    disk_used INTEGER DEFAULT 0,
-    disk_total INTEGER DEFAULT 0,
-    cpu_steal REAL DEFAULT 0,
-    net_up REAL DEFAULT 0,
-    net_down REAL DEFAULT 0,
-    host_name TEXT,
-    os_distro TEXT,
-    kernel_version TEXT,
-    cpu_model TEXT,
-    cpu_cores_detail TEXT,
-    boot_time INTEGER,
-    public_ip TEXT
-  )
-`);
+        table.string('location').defaultTo('Unknown');
+        table.string('isp').defaultTo('Unknown');
 
-// Create history table
-db.exec(`
-  CREATE TABLE IF NOT EXISTS history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    node_id TEXT,
-    timestamp TEXT,
-    load_1 REAL,
-    mem_percent REAL,
-    disk_percent REAL,
-    net_in REAL,
-    net_out REAL
-  );
-  CREATE INDEX IF NOT EXISTS idx_history_node_time ON history(node_id, timestamp);
-`);
+        table.integer('cores').defaultTo(0);
+        table.float('load_1').defaultTo(0);
+        table.float('load_5').defaultTo(0);
+        table.float('load_15').defaultTo(0);
 
-module.exports = db;
+        table.bigInteger('mem_used').defaultTo(0);
+        table.bigInteger('mem_total').defaultTo(0);
+        table.bigInteger('disk_used').defaultTo(0);
+        table.bigInteger('disk_total').defaultTo(0);
+
+        table.float('cpu_steal').defaultTo(0);
+        table.float('net_up').defaultTo(0); // Mbps
+        table.float('net_down').defaultTo(0); // Mbps
+
+        // Static Info
+        table.string('host_name');
+        table.string('os_distro');
+        table.string('kernel_version');
+        table.string('cpu_model');
+        table.string('cpu_cores_detail');
+        table.bigInteger('boot_time');
+        table.string('public_ip');
+      });
+    }
+
+    const hasHistory = await knex.schema.hasTable('history');
+    if (!hasHistory) {
+      console.log('Creating history table...');
+      await knex.schema.createTable('history', table => {
+        table.increments('id');
+        table.string('node_id');
+        table.timestamp('timestamp');
+
+        table.float('load_1');
+        table.float('mem_percent');
+        table.float('disk_percent');
+        table.float('net_in');
+        table.float('net_out');
+
+        table.index(['node_id', 'timestamp']);
+      });
+    }
+  } catch (err) {
+    console.error('Error initializing database:', err);
+  }
+}
+
+init();
+
+module.exports = knex;
