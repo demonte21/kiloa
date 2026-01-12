@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Details - Kiloa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        kiloa: {
+                            bg: '#09090b',
+                            card: '#18181b',
+                            primary: '#8b5cf6',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            color: #d4d4d8;
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, transparent 40%);
+        }
+
+        .stat-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(63, 63, 70, 0.4);
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <a href="/"
+                    class="p-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-gray-400 hover:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+                        Node Details <span class="text-zinc-600">/</span> <span class="font-mono text-kiloa-primary">
+                            <%= node.id %>
+                        </span>
+                    </h1>
+                </div>
+            </div>
+            <% if (node.status==='online' ) { %>
+                <span
+                    class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-2"></span> Live
+                </span>
+                <% } else { %>
+                    <span
+                        class="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-wider">
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></span> Offline
+                    </span>
+                    <% } %>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Column: System Info -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Basic Info -->
+                <div class="stat-card rounded-2xl p-6">
+                    <h2 class="text-lg font-bold text-white mb-4 border-b border-zinc-700 pb-2">Basic System Information
+                    </h2>
+                    <ul class="space-y-3 text-sm font-mono text-gray-400">
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">Host Name</span>
+                            <span class="text-white">
+                                <%= node.host_name || 'Unknown' %>
+                            </span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">Uptime</span>
+                            <span class="text-white">
+                                <%= uptimeStr %>
+                            </span>
+                        </li>
+                        <li class="mt-4"><span class="text-zinc-500 block mb-1">Processor</span> <span
+                                class="text-white block">
+                                <%= node.cpu_model || 'Unknown' %>
+                            </span></li>
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">Cores</span>
+                            <span class="text-white">
+                                <%= node.cores %> @ <%= node.cpu_cores_detail || 'Unknown' %>
+                            </span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">Distro</span>
+                            <span class="text-white">
+                                <%= node.os_distro || 'Unknown' %>
+                            </span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">Kernel</span>
+                            <span class="text-white">
+                                <%= node.kernel_version || 'Unknown' %>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Network Info -->
+                <div class="stat-card rounded-2xl p-6">
+                    <h2 class="text-lg font-bold text-white mb-4 border-b border-zinc-700 pb-2">IPv4/Network</h2>
+                    <ul class="space-y-3 text-sm font-mono text-gray-400">
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">Public IP</span>
+                            <span class="text-blue-400 blur-[2px] hover:blur-none transition cursor-default">
+                                <%= node.public_ip || 'Unknown' %>
+                            </span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">ISP</span>
+                            <span class="text-white">
+                                <%= node.isp %>
+                            </span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-zinc-500">Location</span>
+                            <span class="text-white">
+                                <%= node.location %>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Right Column: Graphs -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Load / CPU Chart -->
+                <div class="stat-card rounded-2xl p-6">
+                    <h3 class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">System Load (24 Hours)
+                    </h3>
+                    <div id="chart-load" class="h-64"></div>
+                </div>
+
+                <!-- RAM / Disk Chart -->
+                <div class="stat-card rounded-2xl p-6">
+                    <h3 class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">Memory & Disk Usage</h3>
+                    <div id="chart-ram" class="h-64"></div>
+                </div>
+
+                <!-- Network Chart -->
+                <div class="stat-card rounded-2xl p-6">
+                    <h3 class="text-sm font-mono text-gray-500 uppercase tracking-wider mb-4">Network Traffic (Mbps)
+                    </h3>
+                    <div id="chart-net" class="h-64"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch history data
+        fetch('/api/node/<%= node.id %>/history')
+            .then(res => res.json())
+            .then(data => {
+                const times = data.map(d => new Date(d.timestamp).getTime());
+
+                // Common options
+                const commonOptions = {
+                    chart: {
+                        type: 'area',
+                        height: 250,
+                        toolbar: { show: false },
+                        background: 'transparent',
+                        zoom: { enabled: false }
+                    },
+                    theme: { mode: 'dark' },
+                    dataLabels: { enabled: false },
+                    stroke: { curve: 'smooth', width: 2 },
+                    xaxis: {
+                        type: 'datetime',
+                        categories: times,
+                        labels: { datetimeFormatter: { day: 'dd MMM', hour: 'HH:mm' } },
+                        tooltip: { enabled: false },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    grid: { borderColor: '#27272a', strokeDashArray: 4 },
+                    fill: { type: 'gradient', gradient: { opacityFrom: 0.5, opacityTo: 0.05 } }
+                };
+
+                // Load Chart
+                new ApexCharts(document.querySelector("#chart-load"), {
+                    ...commonOptions,
+                    series: [{ name: 'Load Average (1m)', data: data.map(d => d.load_1) }],
+                    colors: ['#f59e0b']
+                }).render();
+
+                // RAM Chart
+                new ApexCharts(document.querySelector("#chart-ram"), {
+                    ...commonOptions,
+                    series: [
+                        { name: 'RAM Usage %', data: data.map(d => d.mem_percent) },
+                        { name: 'Disk Usage %', data: data.map(d => d.disk_percent) }
+                    ],
+                    colors: ['#3b82f6', '#a855f7']
+                }).render();
+
+                // Network Chart
+                new ApexCharts(document.querySelector("#chart-net"), {
+                    ...commonOptions,
+                    series: [
+                        { name: 'Inbound (Mbps)', data: data.map(d => d.net_in) },
+                        { name: 'Outbound (Mbps)', data: data.map(d => d.net_out) }
+                    ],
+                    colors: ['#10b981', '#ef4444']
+                }).render();
+            });
+    </script>
+</body>
+
+</html>

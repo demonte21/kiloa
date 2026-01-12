@@ -23,8 +23,30 @@ db.exec(`
     disk_total INTEGER DEFAULT 0,
     cpu_steal REAL DEFAULT 0,
     net_up REAL DEFAULT 0,
-    net_down REAL DEFAULT 0
+    net_down REAL DEFAULT 0,
+    host_name TEXT,
+    os_distro TEXT,
+    kernel_version TEXT,
+    cpu_model TEXT,
+    cpu_cores_detail TEXT,
+    boot_time INTEGER,
+    public_ip TEXT
   )
+`);
+
+// Create history table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id TEXT,
+    timestamp TEXT,
+    load_1 REAL,
+    mem_percent REAL,
+    disk_percent REAL,
+    net_in REAL,
+    net_out REAL
+  );
+  CREATE INDEX IF NOT EXISTS idx_history_node_time ON history(node_id, timestamp);
 `);
 
 module.exports = db;

@@ -221,10 +221,10 @@
                 <div class="col-span-1 text-right">State</div>
             </div>
 
-            <!-- Client Rows -->
+            <!-- Client Rows (Clickable) -->
             <% nodes.forEach(function(node) { %>
-                <div
-                    class="group relative bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/80 rounded-xl transition-all duration-200 mb-4">
+                <a href="/node/<%= node.id %>"
+                    class="block group relative bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/80 rounded-xl transition-all duration-200 mb-4 cursor-pointer no-underline">
 
                     <!-- Main Row Content -->
                     <div class="p-4 grid grid-cols-12 gap-4 items-center z-20 relative">
@@ -358,7 +358,7 @@
                         </div>
                     </div>
 
-                </div>
+                </a>
                 <% }); %>
 
         </div>

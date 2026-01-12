@@ -44,43 +44,73 @@ app.post('/api/report', (req, res) => {
     if (existing) {
         // Update existing node
         db.prepare(`
-      UPDATE nodes SET
-        updated_at = ?,
-        last_seen = ?,
-        location = COALESCE(?, location),
-        isp = COALESCE(?, isp),
-        cores = COALESCE(?, cores),
-        load_1 = COALESCE(?, load_1),
-        load_5 = COALESCE(?, load_5),
-        load_15 = COALESCE(?, load_15),
-        mem_used = COALESCE(?, mem_used),
-        mem_total = COALESCE(?, mem_total),
-        disk_used = COALESCE(?, disk_used),
-        disk_total = COALESCE(?, disk_total),
-        cpu_steal = COALESCE(?, cpu_steal),
-        net_up = COALESCE(?, net_up),
-        net_down = COALESCE(?, net_down)
-      WHERE id = ?
-    `).run(
+        UPDATE nodes SET
+            updated_at = ?,
+            last_seen = ?,
+            location = COALESCE(?, location),
+            isp = COALESCE(?, isp),
+            cores = COALESCE(?, cores),
+            load_1 = COALESCE(?, load_1),
+            load_5 = COALESCE(?, load_5),
+            load_15 = COALESCE(?, load_15),
+            mem_used = COALESCE(?, mem_used),
+            mem_total = COALESCE(?, mem_total),
+            disk_used = COALESCE(?, disk_used),
+            disk_total = COALESCE(?, disk_total),
+            cpu_steal = COALESCE(?, cpu_steal),
+            net_up = COALESCE(?, net_up),
+            net_down = COALESCE(?, net_down),
+            host_name = COALESCE(?, host_name),
+            os_distro = COALESCE(?, os_distro),
+            kernel_version = COALESCE(?, kernel_version),
+            cpu_model = COALESCE(?, cpu_model),
+            cpu_cores_detail = COALESCE(?, cpu_cores_detail),
+            boot_time = COALESCE(?, boot_time),
+            public_ip = COALESCE(?, public_ip)
+        WHERE id = ?
+        `).run(
             now, now,
             data.location, data.isp,
             data.cores, data.load_1, data.load_5, data.load_15,
             data.mem_used, data.mem_total, data.disk_used, data.disk_total,
             data.cpu_steal, data.net_up, data.net_down,
+            data.host_name, data.os_distro, data.kernel_version, data.cpu_model, data.cpu_cores_detail, data.boot_time, data.public_ip,
             nodeId
         );
     } else {
         // Insert new node
         db.prepare(`
-      INSERT INTO nodes (id, created_at, updated_at, last_seen, location, isp, cores, load_1, load_5, load_15, mem_used, mem_total, disk_used, disk_total, cpu_steal, net_up, net_down)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+        INSERT INTO nodes (id, created_at, updated_at, last_seen, location, isp, cores, load_1, load_5, load_15, mem_used, mem_total, disk_used, disk_total, cpu_steal, net_up, net_down, host_name, os_distro, kernel_version, cpu_model, cpu_cores_detail, boot_time, public_ip)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
             nodeId, now, now, now,
             data.location || 'Unknown', data.isp || 'Unknown',
             data.cores || 0, data.load_1 || 0, data.load_5 || 0, data.load_15 || 0,
             data.mem_used || 0, data.mem_total || 0, data.disk_used || 0, data.disk_total || 0,
-            data.cpu_steal || 0, data.net_up || 0, data.net_down || 0
+            data.cpu_steal || 0, data.net_up || 0, data.net_down || 0,
+            data.host_name || null, data.os_distro || null, data.kernel_version || null, data.cpu_model || null, data.cpu_cores_detail || null, data.boot_time || null, data.public_ip || null
         );
+    }
+
+    // Insert into history (max 1 point per minute)
+    const lastHistory = db.prepare('SELECT timestamp FROM history WHERE node_id = ? ORDER BY timestamp DESC LIMIT 1').get(nodeId);
+    const shouldInsertHistory = !lastHistory || (new Date() - new Date(lastHistory.timestamp) > 60000); // 60s throttle
+
+    if (shouldInsertHistory) {
+        const memPercent = data.mem_total > 0 ? (data.mem_used / data.mem_total) * 100 : 0;
+        const diskPercent = data.disk_total > 0 ? (data.disk_used / data.disk_total) * 100 : 0;
+
+        db.prepare(`
+            INSERT INTO history (node_id, timestamp, load_1, mem_percent, disk_percent, net_in, net_out)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(nodeId, now, data.load_1 || 0, memPercent, diskPercent, data.net_down || 0, data.net_up || 0);
+
+        // Cleanup old history (keep only 24h) - basic cleanup occasionally
+        // Improve: Do this via a cron or less frequently to avoid overhead on every request
+        // For now, let's just keep it simple and maybe add cleanup later or do it with 1/100 probability
+        if (Math.random() < 0.01) {
+            db.prepare("DELETE FROM history WHERE timestamp < datetime('now', '-1 day')").run();
+        }
     }
 
     res.json({ status: 'ok' });
@@ -129,6 +159,46 @@ app.get('/api/nodes', (req, res) => {
     const nodes = db.prepare('SELECT * FROM nodes ORDER BY last_seen DESC').all();
     res.json(nodes);
 });
+
+// GET /node/:id - Node Detail Page
+app.get('/node/:id', (req, res) => {
+    const node = db.prepare('SELECT * FROM nodes WHERE id = ?').get(req.params.id);
+    if (!node) return res.status(404).send('Node not found');
+
+    // Process single node for view (reuse logic if possible, but keep simple)
+    const lastSeen = new Date(node.last_seen);
+    const now = new Date();
+    const diffMs = now - lastSeen;
+    const diffMins = diffMs / 1000 / 60;
+
+    node.status = diffMins < 2 ? 'online' : 'offline';
+    node.memUsedGB = (node.mem_used / 1073741824).toFixed(2);
+    node.memTotalGB = (node.mem_total / 1073741824).toFixed(2);
+
+    // Format Uptime
+    let uptimeStr = "Unknown";
+    if (node.boot_time) {
+        const bootDate = new Date(node.boot_time * 1000);
+        const uptimeMs = now - bootDate;
+        const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
+        const uptimeHours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        uptimeStr = `${uptimeDays} days, ${uptimeHours} hours`;
+    }
+
+    res.render('detail', { node, uptimeStr });
+});
+
+// GET /api/node/:id/history - JSON for charts
+app.get('/api/node/:id/history', (req, res) => {
+    const history = db.prepare(`
+        SELECT timestamp, load_1, mem_percent, disk_percent, net_in, net_out 
+        FROM history 
+        WHERE node_id = ? AND timestamp > datetime('now', '-24 hours')
+        ORDER BY timestamp ASC
+    `).all(req.params.id);
+    res.json(history);
+});
+
 
 // Start server
 app.listen(PORT, () => {

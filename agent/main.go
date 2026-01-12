@@ -29,39 +29,76 @@ type Config struct {
 
 // SystemStats represents the JSON payload sent to the dashboard
 type SystemStats struct {
-	NodeID    string  `json:"node_id"`
-	Location  string  `json:"location"`
-	ISP       string  `json:"isp"`
-	Uptime    uint64  `json:"uptime"`
-	Cores     int     `json:"cores"`
-	Load1     float64 `json:"load_1"`
-	Load5     float64 `json:"load_5"`
-	Load15    float64 `json:"load_15"`
-	MemUsed   uint64  `json:"mem_used"`
-	MemTotal  uint64  `json:"mem_total"`
-	DiskUsed  uint64  `json:"disk_used"`
-	DiskTotal uint64  `json:"disk_total"`
-	CPUSteal  float64 `json:"cpu_steal"` // Percentage
-	NetUp     float64 `json:"net_up"`    // MB/s
-	NetDown   float64 `json:"net_down"`  // MB/s
+	NodeID         string  `json:"node_id"`
+	Location       string  `json:"location"`
+	ISP            string  `json:"isp"`
+	Uptime         uint64  `json:"uptime"`
+	Cores          int     `json:"cores"`
+	Load1          float64 `json:"load_1"`
+	Load5          float64 `json:"load_5"`
+	Load15         float64 `json:"load_15"`
+	MemUsed        uint64  `json:"mem_used"`
+	MemTotal       uint64  `json:"mem_total"`
+	DiskUsed       uint64  `json:"disk_used"`
+	DiskTotal      uint64  `json:"disk_total"`
+	CPUSteal       float64 `json:"cpu_steal"`
+	NetUp          float64 `json:"net_up"`
+	NetDown        float64 `json:"net_down"`
+	HostName       string  `json:"host_name"`
+	OSDistro       string  `json:"os_distro"`
+	KernelVersion  string  `json:"kernel_version"`
+	CPUModel       string  `json:"cpu_model"`
+	CPUCoresDetail string  `json:"cpu_cores_detail"`
+	BootTime       uint64  `json:"boot_time"`
+	PublicIP       string  `json:"public_ip"`
 }
 
 type Collector struct {
 	lastNet  []net.IOCountersStat
 	lastCPU  []cpu.TimesStat
 	lastTime time.Time
+	// Static info cache
+	hostName       string
+	osDistro       string
+	kernelVersion  string
+	cpuModel       string
+	cpuCoresDetail string
+	bootTime       uint64
+	publicIP       string
 }
 
 func NewCollector() *Collector {
-	return &Collector{
+	c := &Collector{
 		lastTime: time.Now(),
 	}
+
+	// Gather static info once
+	h, _ := host.Info()
+	c.hostName = h.Hostname
+	c.osDistro = fmt.Sprintf("%s %s", h.Platform, h.PlatformVersion)
+	c.kernelVersion = h.KernelVersion
+	c.bootTime = h.BootTime
+
+	cpus, _ := cpu.Info()
+	if len(cpus) > 0 {
+		c.cpuModel = cpus[0].ModelName
+		c.cpuCoresDetail = fmt.Sprintf("%.2f MHz", cpus[0].Mhz)
+	}
+
+	// Simple Public IP fetch (can reuse getISP logic)
+	// We will rely on main to set this if possible or fetch it here efficiently?
+	// Let's reuse the cached one from main if we pass it, or just fetch it once here.
+	// For simplicity, let's keep it empty here and let the main loop fill it via config or separate init if needed.
+	// Actually, let's fetch it once here using a quick helper.
+	c.publicIP, _ = getPublicIP()
+
+	return c
 }
 
 func (c *Collector) Collect(cfg Config) (*SystemStats, error) {
 	now := time.Now()
 
-	// Host Info
+	// Host Info (Uptime updates dynamicall)
 	hostInfo, err := host.Info()
 	if err != nil {
 		return nil, fmt.Errorf("host info: %v", err)
@@ -92,18 +129,25 @@ func (c *Collector) Collect(cfg Config) (*SystemStats, error) {
 	}
 
 	stats := &SystemStats{
-		NodeID:    cfg.NodeID,
-		Location:  cfg.Location,
-		ISP:       cfg.ISP,
-		Uptime:    hostInfo.Uptime,
-		Cores:     cores,
-		Load1:     avg.Load1,
-		Load5:     avg.Load5,
-		Load15:    avg.Load15,
-		MemUsed:   v.Used,
-		MemTotal:  v.Total,
-		DiskUsed:  d.Used,
-		DiskTotal: d.Total,
+		NodeID:         cfg.NodeID,
+		Location:       cfg.Location,
+		ISP:            cfg.ISP,
+		Uptime:         hostInfo.Uptime,
+		Cores:          cores,
+		Load1:          avg.Load1,
+		Load5:          avg.Load5,
+		Load15:         avg.Load15,
+		MemUsed:        v.Used,
+		MemTotal:       v.Total,
+		DiskUsed:       d.Used,
+		DiskTotal:      d.Total,
+		HostName:       c.hostName,
+		OSDistro:       c.osDistro,
+		KernelVersion:  c.kernelVersion,
+		CPUModel:       c.cpuModel,
+		CPUCoresDetail: c.cpuCoresDetail,
+		BootTime:       c.bootTime,
+		PublicIP:       c.publicIP,
 	}
 
 	// Calculate Deltas for CPU Steal and Network
@@ -163,6 +207,8 @@ func main() {
 		*nodeID = hostInfo.Hostname
 	}
 
+	// We can reuse the getISP/IP logic here if needed, but the collector does it internally now for PublicIP.
+	// However, ISP is still a flag. Let's keep existing logic for ISP.
 	if *isp == "Unknown" {
 		fmt.Println("Detecting ISP...")
 		*isp = getISP()
@@ -223,7 +269,8 @@ func sendReport(cfg Config, data []byte) {
 }
 
 type IPAPIResponse struct {
-	ISP string `json:"isp"`
+	ISP   string `json:"isp"`
+	Query string `json:"query"`
 }
 
 func getISP() string {
@@ -243,4 +290,19 @@ func getISP() string {
 		return "Unknown"
 	}
 	return result.ISP
+}
+
+func getPublicIP() (string, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("http://ip-api.com/json/")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var result IPAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	return result.Query, nil
 }
