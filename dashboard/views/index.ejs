@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiloa Monitoring</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        kiloa: {
+                            bg: '#111217',
+                            card: '#1a1b26',
+                            border: '#2a2b36',
+                            text: '#a1a1aa',
+                            textLight: '#ffffff',
+                            accent: '#4ade80',
+                            accentRed: '#f87171',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #111217;
+            color: #a1a1aa;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(26, 27, 38, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid #2a2b36;
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="p-6">
+    <!-- Header Stats -->
+    <div
+        class="max-w-7xl mx-auto glass-card rounded-xl p-6 mb-8 flex flex-col md:flex-row justify-between items-center shadow-lg">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">System Status</h1>
+            <p class="text-sm text-gray-500">Overall network health and aggregate resources.</p>
+        </div>
+        <div class="flex gap-8 mt-4 md:mt-0">
+            <div class="text-center">
+                <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Nodes</div>
+                <div class="text-xl font-bold text-green-400">
+                    <%= stats.totalNodes %>
+                </div>
+            </div>
+            <div class="text-center">
+                <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">RAM Usage</div>
+                <div class="text-xl font-bold text-white">
+                    <%= stats.memUsed %> <span class="text-gray-500 text-sm">/ <%= stats.memTotal %></span>
+                </div>
+            </div>
+            <div class="text-center">
+                <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Disk Usage</div>
+                <div class="text-xl font-bold text-white">
+                    <%= stats.diskUsed %> <span class="text-gray-500 text-sm">/ <%= stats.diskTotal %></span>
+                </div>
+            </div>
+            <div class="text-center">
+                <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Network</div>
+                <div class="text-xl font-bold text-white">
+                    <span class="text-red-400">↑ <%= stats.netUp %></span>
+                    <span class="text-green-400 ml-2">↓ <%= stats.netDown %></span>
+                    <span class="text-xs text-gray-500">Mbps</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="max-w-7xl mx-auto">
+        <div class="mb-6 flex flex-wrap gap-2">
+            <span
+                class="px-3 py-1 bg-kiloa-card border border-kiloa-border rounded-full text-xs text-white cursor-pointer hover:bg-gray-800 transition">All
+                Nodes</span>
+        </div>
+
+        <div class="glass-card rounded-xl overflow-hidden shadow-lg">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr
+                        class="bg-[#15161c] text-xs uppercase tracking-wider text-gray-500 border-b border-kiloa-border">
+                        <th class="px-6 py-4">ISP</th>
+                        <th class="px-6 py-4">Node ID</th>
+                        <th class="px-6 py-4">Cores</th>
+                        <th class="px-6 py-4">Load Avg</th>
+                        <th class="px-6 py-4">RAM Used</th>
+                        <th class="px-6 py-4">Disk Used</th>
+                        <th class="px-6 py-4">CPU Steal</th>
+                        <th class="px-6 py-4">Network</th>
+                        <th class="px-6 py-4 text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-kiloa-border">
+                    <% nodes.forEach(function(node) { %>
+                        <tr class="hover:bg-white/5 transition">
+                            <td class="px-6 py-4 font-medium text-white">
+                                <%= node.isp %>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-xs text-gray-400">
+                                <%= node.id %>
+                            </td>
+                            <td class="px-6 py-4">
+                                <%= node.cores %>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-xs">
+                                <div class="flex flex-col gap-1">
+                                    <span>
+                                        <%= node.load_1.toFixed(2) %> / <%= node.load_5.toFixed(2) %>
+                                    </span>
+                                    <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden"
+                                        title="Load: <%= node.loadPercent %>%">
+                                        <div class="h-full bg-yellow-500 progress-bar"
+                                            style="width: <%= Math.min(node.loadPercent, 100) %>%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-xs text-gray-400">
+                                        <%= node.memUsedGB %>G <span class="text-gray-600">/ <%= node.memTotalGB %>
+                                                    G</span>
+                                    </span>
+                                    <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden"
+                                        title="RAM: <%= node.memPercent %>%">
+                                        <div class="h-full bg-blue-500 progress-bar"
+                                            style="width: <%= node.memPercent %>%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-xs text-gray-400">
+                                        <%= node.diskUsedGB %>G <span class="text-gray-600">/ <%= node.diskTotalGB %>
+                                                    G</span>
+                                    </span>
+                                    <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden"
+                                        title="Disk: <%= node.diskPercent %>%">
+                                        <div class="h-full bg-purple-500 progress-bar"
+                                            style="width: <%= node.diskPercent %>%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 <%= node.cpu_steal > 10 ? 'text-red-400 font-bold' : '' %>">
+                                <%= node.cpu_steal.toFixed(2) %>%
+                            </td>
+                            <td class="px-6 py-4 font-mono text-xs">
+                                <div class="flex flex-col">
+                                    <span class="text-red-400">↑ <%= node.net_up.toFixed(2) %> Mbps</span>
+                                    <span class="text-green-400">↓ <%= node.net_down.toFixed(2) %> Mbps</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right" title="Last Seen: <%= node.last_seen %>">
+                                <% if (node.status==='online' ) { %>
+                                    <span
+                                        class="inline-block w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                                    <% } else { %>
+                                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                        <% } %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Auto-reload every 5 seconds
+        setTimeout(function () {
+            window.location.reload();
+        }, 5000);
+    </script>
+</body>
+
+</html>
