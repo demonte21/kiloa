@@ -264,7 +264,7 @@
                                         <%= node.name || node.host_name || node.id %>
                                     </span>
                                     <!-- Edit Button (Stop propagation) -->
-                                    <button onclick="event.preventDefault(); editNodeName('<%= node.id %>')"
+                                    <button onclick="event.preventDefault(); openEditModal('<%= node.id %>')"
                                         class="text-zinc-600 hover:text-white transition opacity-0 group-hover:opacity-100 p-1">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -404,6 +404,35 @@
         </div>
     </div>
 
+    <!-- Custom Edit Modal -->
+    <div id="edit-modal"
+        class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity opacity-0">
+        <div class="bg-zinc-900 border border-zinc-700/50 rounded-2xl shadow-2xl w-full max-w-md p-6 transform scale-95 transition-transform duration-200"
+            id="edit-modal-content">
+            <h3 class="text-lg font-bold text-white mb-2">Rename Node</h3>
+            <p class="text-zinc-400 text-sm mb-6">Enter a new friendly name for this node.</p>
+
+            <input type="hidden" id="edit-node-id">
+            <div class="mb-6">
+                <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Node Name</label>
+                <input type="text" id="edit-node-name"
+                    class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition placeholder-zinc-700"
+                    placeholder="e.g. Database Server" onkeydown="if(event.key === 'Enter') saveEditModal()">
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+                <button onclick="closeEditModal()"
+                    class="px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition">
+                    Cancel
+                </button>
+                <button onclick="saveEditModal()"
+                    class="px-6 py-2 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-900/20 active:scale-95 transition">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Layout Lock State
         let isLocked = localStorage.getItem('kiloa_layout_locked') !== 'false'; // Default to true if not set
@@ -475,31 +504,68 @@
             }
         });
 
-        // Edit Node Name
-        function editNodeName(id) {
+        // Modal Logic
+        const modal = document.getElementById('edit-modal');
+        const modalContent = document.getElementById('edit-modal-content');
+        const nameInput = document.getElementById('edit-node-name');
+        const idInput = document.getElementById('edit-node-id');
+
+        function openEditModal(id) {
             const row = document.querySelector(`.node-row[data-id="${id}"]`);
             if (!row) return;
 
             const nameSpan = row.querySelector('.node-name-text');
             const currentName = nameSpan.textContent.trim();
-            const newName = prompt("Enter new name for this node:", currentName);
 
-            if (newName !== null && newName !== currentName) {
-                fetch(`/api/node/${id}/name`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName })
-                }).then(res => {
-                    if (res.ok) {
-                        // Update DOM immediately without reload
-                        nameSpan.textContent = newName;
-                        const avatar = row.querySelector('.node-avatar-text');
-                        if (avatar) avatar.textContent = newName.substring(0, 2).toUpperCase();
-                    } else {
-                        alert('Failed to update name');
-                    }
-                }).catch(err => console.error(err));
-            }
+            idInput.value = id;
+            nameInput.value = currentName;
+
+            // Show modal
+            modal.classList.remove('hidden');
+            // Animation tick
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+                nameInput.focus();
+                nameInput.select();
+            }, 10);
+        }
+
+        function closeEditModal() {
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function saveEditModal() {
+            const id = idInput.value;
+            const newName = nameInput.value.trim();
+            const row = document.querySelector(`.node-row[data-id="${id}"]`);
+
+            if (!row || !newName) return;
+
+            fetch(`/api/node/${id}/name`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
+            }).then(res => {
+                if (res.ok) {
+                    // Update DOM immediately
+                    const nameSpan = row.querySelector('.node-name-text');
+                    nameSpan.textContent = newName;
+
+                    const avatar = row.querySelector('.node-avatar-text');
+                    if (avatar) avatar.textContent = newName.substring(0, 2).toUpperCase();
+
+                    closeEditModal();
+                } else {
+                    alert('Failed to update name');
+                }
+            }).catch(err => console.error(err));
         }
 
         // Initialize UI
@@ -507,13 +573,11 @@
 
         // Auto-reload logic
         setTimeout(function () {
-            // If unlocked (editing mode), maybe pause reload? 
-            // Or just reload. If we reload, state is saved in localStorage, so it will come back unlocked.
-            // But mid-drag reload is annoying.
-            if (isLocked) {
+            // Pause reload if locked OR if modal is open
+            if (isLocked && modal.classList.contains('hidden')) {
                 window.location.reload();
             } else {
-                console.log('Reload paused while unlocked/editing.');
+                console.log('Reload paused.');
             }
         }, 5000);
     </script>
