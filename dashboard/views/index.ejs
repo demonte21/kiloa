@@ -254,18 +254,17 @@
                             <!-- Name / ID (Editable) -->
                             <div class="col-span-3 flex items-center gap-3">
                                 <div
-                                    class="w-8 h-8 rounded bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700 font-bold text-gray-400 text-xs shadow-inner shrink-0">
+                                    class="node-avatar-text w-8 h-8 rounded bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700 font-bold text-gray-400 text-xs shadow-inner shrink-0">
                                     <%= (node.name || node.host_name || node.id).substring(0, 2).toUpperCase() %>
                                 </div>
                                 <div class="flex items-center gap-2 min-w-0">
                                     <span
-                                        class="text-sm font-bold text-white truncate group-hover:text-kiloa-primary transition"
+                                        class="node-name-text text-sm font-bold text-white truncate group-hover:text-kiloa-primary transition"
                                         title="<%= node.id %>">
                                         <%= node.name || node.host_name || node.id %>
                                     </span>
                                     <!-- Edit Button (Stop propagation) -->
-                                    <button
-                                        onclick="event.preventDefault(); editNodeName('<%= node.id %>', '<%= node.name || node.host_name || node.id %>')"
+                                    <button onclick="event.preventDefault(); editNodeName('<%= node.id %>')"
                                         class="text-zinc-600 hover:text-white transition opacity-0 group-hover:opacity-100 p-1">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
