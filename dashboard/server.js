@@ -324,11 +324,11 @@ app.get('/api/node/:id/history', async (req, res) => {
 
             // Accumulate
             currentBucket.count++;
-            currentBucket.load += (point.load_1 || 0);
-            currentBucket.mem += (point.mem_percent || 0);
-            currentBucket.disk += (point.disk_percent || 0);
-            currentBucket.netIn += (point.net_in || 0);
-            currentBucket.netOut += (point.net_out || 0);
+            currentBucket.load += Number(point.load_1 || 0);
+            currentBucket.mem += Number(point.mem_percent || 0);
+            currentBucket.disk += Number(point.disk_percent || 0);
+            currentBucket.netIn += Number(point.net_in || 0);
+            currentBucket.netOut += Number(point.net_out || 0);
         }
 
         // Push last bucket
