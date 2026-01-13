@@ -268,11 +268,14 @@ app.get('/api/node/:id/history', async (req, res) => {
     try {
         const range = req.query.range || '24h';
         let ms = 24 * 60 * 60 * 1000; // Default 24h
+        let bucketSizeMs = 15 * 60 * 1000; // Default 15 min buckets for 24h
 
         if (range === '7d') {
             ms = 7 * 24 * 60 * 60 * 1000;
+            bucketSizeMs = 2 * 60 * 60 * 1000; // 2 hour buckets
         } else if (range === '30d') {
             ms = 30 * 24 * 60 * 60 * 1000;
+            bucketSizeMs = 6 * 60 * 60 * 1000; // 6 hour buckets
         }
 
         const cutoff = new Date(Date.now() - ms);
@@ -283,7 +286,64 @@ app.get('/api/node/:id/history', async (req, res) => {
             .andWhere('timestamp', '>', cutoff)
             .orderBy('timestamp', 'asc');
 
-        res.json(history);
+        const aggregated = [];
+        if (history.length === 0) return res.json([]);
+
+        // Align start time to the first data point
+        let currentBucketStart = new Date(history[0].timestamp).getTime();
+        let currentBucket = {
+            count: 0,
+            load: 0, mem: 0, disk: 0, netIn: 0, netOut: 0
+        };
+
+        for (const point of history) {
+            const pointTime = new Date(point.timestamp).getTime();
+
+            // If point belongs to the next bucket
+            if (pointTime >= currentBucketStart + bucketSizeMs) {
+                // Push current bucket if it has data
+                if (currentBucket.count > 0) {
+                    aggregated.push({
+                        timestamp: new Date(currentBucketStart + (bucketSizeMs / 2)),
+                        load_1: currentBucket.load / currentBucket.count,
+                        mem_percent: currentBucket.mem / currentBucket.count,
+                        disk_percent: currentBucket.disk / currentBucket.count,
+                        net_in: currentBucket.netIn / currentBucket.count,
+                        net_out: currentBucket.netOut / currentBucket.count
+                    });
+                }
+
+                // Move bucket window forward
+                while (pointTime >= currentBucketStart + bucketSizeMs) {
+                    currentBucketStart += bucketSizeMs;
+                }
+
+                // Reset bucket
+                currentBucket = { count: 0, load: 0, mem: 0, disk: 0, netIn: 0, netOut: 0 };
+            }
+
+            // Accumulate
+            currentBucket.count++;
+            currentBucket.load += Number(point.load_1 || 0);
+            currentBucket.mem += Number(point.mem_percent || 0);
+            currentBucket.disk += Number(point.disk_percent || 0);
+            currentBucket.netIn += Number(point.net_in || 0);
+            currentBucket.netOut += Number(point.net_out || 0);
+        }
+
+        // Push last bucket
+        if (currentBucket.count > 0) {
+            aggregated.push({
+                timestamp: new Date(currentBucketStart + (bucketSizeMs / 2)),
+                load_1: currentBucket.load / currentBucket.count,
+                mem_percent: currentBucket.mem / currentBucket.count,
+                disk_percent: currentBucket.disk / currentBucket.count,
+                net_in: currentBucket.netIn / currentBucket.count,
+                net_out: currentBucket.netOut / currentBucket.count
+            });
+        }
+
+        res.json(aggregated);
     } catch (err) {
         console.error('History API Error:', err);
         res.status(500).json({ error: err.message });
