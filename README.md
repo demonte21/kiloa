@@ -4,7 +4,7 @@
 
 Kiloa consists of a central **Dashboard** (Node.js) to view your servers and a lightweight **Agent** (Go) to install on your VPS instances.
 
-![Dashboard Preview](dashboard_preview.png)
+<img width="1331" height="652" alt="image" src="https://github.com/user-attachments/assets/e187e738-74bd-4917-9f1c-8cfeab2c0e9f" />
 
 ## Features
 - **Real-time Monitoring**: CPU, RAM, Disk, Network usage.
