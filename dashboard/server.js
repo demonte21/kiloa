@@ -216,6 +216,18 @@ app.post('/api/reorder', async (req, res) => {
     }
 });
 
+// POST /api/node/:id/name - Update node name
+app.post('/api/node/:id/name', async (req, res) => {
+    try {
+        const { name } = req.body;
+        await db('nodes').where({ id: req.params.id }).update({ name });
+        res.json({ status: 'ok' });
+    } catch (err) {
+        console.error('Rename Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /api/nodes
 app.get('/api/nodes', async (req, res) => {
     try {
