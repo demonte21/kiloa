@@ -114,10 +114,12 @@
                                 <%= uptimeStr %>
                             </span>
                         </li>
-                        <li class="mt-4"><span class="text-zinc-500 block mb-1">Processor</span> <span
-                                class="text-white block">
+                        <li class="flex justify-between items-start gap-4">
+                            <span class="text-zinc-500 shrink-0">Processor</span>
+                            <span class="text-white text-right">
                                 <%= node.cpu_model || 'Unknown' %>
-                            </span></li>
+                            </span>
+                        </li>
                         <li class="flex justify-between">
                             <span class="text-zinc-500">Cores</span>
                             <span class="text-white">
