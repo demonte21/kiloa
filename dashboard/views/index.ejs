@@ -187,7 +187,7 @@
     <div class="max-w-7xl mx-auto">
 
         <!-- Filters (Redesigned) -->
-        <div class="mb-6 flex items-center gap-2">
+        <div class="mb-6 flex flex-wrap items-center gap-2">
             <button
                 class="px-4 py-2 bg-zinc-900 border border-zinc-700 text-white rounded-lg text-xs font-medium hover:border-kiloa-primary transition shadow-lg shadow-purple-900/10 active:scale-95">
                 Global View
@@ -200,10 +200,30 @@
                 class="px-4 py-2 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 text-gray-500 rounded-lg text-xs font-medium transition">
                 Europe
             </button>
-            <!-- Add search -->
-            <div class="ml-auto relative">
-                <input type="text" placeholder="Search node ID..."
-                    class="bg-zinc-900/50 border border-zinc-800 text-xs text-gray-300 rounded-lg px-3 py-2 w-48 focus:outline-none focus:border-gray-600 transition">
+
+            <div class="ml-auto flex items-center gap-2">
+                <!-- Layout Lock Button -->
+                <button id="toggle-layout-btn" onclick="toggleLayoutLock()"
+                    class="px-3 py-2 bg-zinc-900 border border-zinc-800 text-gray-400 rounded-lg text-xs font-medium hover:text-white transition flex items-center gap-2">
+                    <svg id="icon-locked" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                        </path>
+                    </svg>
+                    <svg id="icon-unlocked" class="w-4 h-4 hidden" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                    <span id="label-lock">Locked</span>
+                </button>
+
+                <!-- Search -->
+                <div class="relative">
+                    <input type="text" placeholder="Search node ID..."
+                        class="bg-zinc-900/50 border border-zinc-800 text-xs text-gray-300 rounded-lg px-3 py-2 w-48 focus:outline-none focus:border-gray-600 transition">
+                </div>
             </div>
         </div>
 
@@ -226,7 +246,7 @@
             <% nodes.forEach(function(node) { %>
                 <div class="node-row" data-id="<%= node.id %>">
                     <a href="/node/<%= node.id %>"
-                        class="block group relative bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/80 rounded-xl transition-all duration-200 mb-4 cursor-move no-underline">
+                        class="block group relative bg-zinc-900/40 border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900/80 rounded-xl transition-all duration-200 mb-4 no-underline">
 
                         <!-- Main Row Content -->
                         <div class="p-4 grid grid-cols-12 gap-4 items-center z-20 relative">
@@ -369,12 +389,58 @@
     </div>
 
     <script>
+        // Layout Lock State
+        let isLocked = localStorage.getItem('kiloa_layout_locked') !== 'false'; // Default to true if not set
+        const lockBtn = document.getElementById('toggle-layout-btn');
+        const iconLocked = document.getElementById('icon-locked');
+        const iconUnlocked = document.getElementById('icon-unlocked');
+        const labelLock = document.getElementById('label-lock');
+
+        function updateLockUI() {
+            if (isLocked) {
+                iconLocked.classList.remove('hidden');
+                iconUnlocked.classList.add('hidden');
+                labelLock.textContent = 'Locked';
+                lockBtn.classList.remove('text-purple-400', 'border-purple-500/50', 'bg-purple-500/10');
+                lockBtn.classList.add('text-gray-400', 'border-zinc-800', 'bg-zinc-900');
+
+                // Disable drag
+                sortable.option("disabled", true);
+
+                // Visual cleanup
+                document.querySelectorAll('.block.group').forEach(el => {
+                    el.classList.remove('cursor-move');
+                });
+            } else {
+                iconLocked.classList.add('hidden');
+                iconUnlocked.classList.remove('hidden');
+                labelLock.textContent = 'Unlocked';
+                lockBtn.classList.add('text-purple-400', 'border-purple-500/50', 'bg-purple-500/10');
+                lockBtn.classList.remove('text-gray-400', 'border-zinc-800', 'bg-zinc-900');
+
+                // Enable drag
+                sortable.option("disabled", false);
+
+                // Visual hint
+                document.querySelectorAll('.block.group').forEach(el => {
+                    el.classList.add('cursor-move');
+                });
+            }
+        }
+
+        function toggleLayoutLock() {
+            isLocked = !isLocked;
+            localStorage.setItem('kiloa_layout_locked', isLocked);
+            updateLockUI();
+        }
+
         // SortableJS initialization
         const el = document.getElementById('nodes-container');
         const sortable = Sortable.create(el, {
             animation: 150,
-            handle: '.node-row', // Drag handle
+            handle: '.node-row', // Drag handle (entire row)
             draggable: '.node-row',
+            disabled: true, // Start disabled, updateLockUI will fix
             onEnd: function (evt) {
                 // Get new order
                 const order = [];
@@ -393,20 +459,19 @@
             }
         });
 
-        // Auto-reload logic - Adjusted to NOT reload if dragging or recently dragged?
-        // Actually, if we just saved the order, the next reload will respect it.
-        // We can keep the simple reload for now.
+        // Initialize UI
+        updateLockUI();
+
+        // Auto-reload logic
         setTimeout(function () {
-            // Only reload if user is NOT currently dragging (Sortable generally handles this event queue essentially)
-            // But to be safe, maybe we don't reload? 
-            // The user asked to stop them from jumping. Since we now have a fixed order, 
-            // even if we reload, they shouldn't jump unless the order changed in DB.
-            // If we just saved the order, DB is updated. So next reload is fine.
-            // EDIT: If user is mid-drag when reload happens, that's annoying.
-            // But user action is relatively rare vs 5s interval.
-            // We can check if mouse is down? No.
-            // For now, let's keep it simple. The positions are stable now!
-            window.location.reload();
+            // If unlocked (editing mode), maybe pause reload? 
+            // Or just reload. If we reload, state is saved in localStorage, so it will come back unlocked.
+            // But mid-drag reload is annoying.
+            if (isLocked) {
+                window.location.reload();
+            } else {
+                console.log('Reload paused while unlocked/editing.');
+            }
         }, 5000);
     </script>
 </body>
