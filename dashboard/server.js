@@ -216,6 +216,18 @@ app.post('/api/reorder', async (req, res) => {
     }
 });
 
+// POST /api/node/:id/name - Update node name
+app.post('/api/node/:id/name', async (req, res) => {
+    try {
+        const { name } = req.body;
+        await db('nodes').where({ id: req.params.id }).update({ name });
+        res.json({ status: 'ok' });
+    } catch (err) {
+        console.error('Rename Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /api/nodes
 app.get('/api/nodes', async (req, res) => {
     try {
@@ -322,13 +334,21 @@ app.get('/api/node/:id/history', async (req, res) => {
                 currentBucket = { count: 0, load: 0, mem: 0, disk: 0, netIn: 0, netOut: 0 };
             }
 
-            // Accumulate
+            // Accumulate with anomaly filtering
+            const MAX_MBPS = 100000; // 100 Gbps sanity limit
+            let netInVal = Number(point.net_in || 0);
+            let netOutVal = Number(point.net_out || 0);
+
+            // Filter spikes
+            if (netInVal > MAX_MBPS) netInVal = 0;
+            if (netOutVal > MAX_MBPS) netOutVal = 0;
+
             currentBucket.count++;
             currentBucket.load += Number(point.load_1 || 0);
             currentBucket.mem += Number(point.mem_percent || 0);
             currentBucket.disk += Number(point.disk_percent || 0);
-            currentBucket.netIn += Number(point.net_in || 0);
-            currentBucket.netOut += Number(point.net_out || 0);
+            currentBucket.netIn += netInVal;
+            currentBucket.netOut += netOutVal;
         }
 
         // Push last bucket
